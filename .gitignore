@@ -1,0 +1,39 @@
+# Dependency directories
+node_modules/
+.pnpm/
+.yarn/
+.packages/
+
+# Production and build output
+build/
+dist/
+.next/
+out/
+.vercel/
+
+# Environment files
+.env
+.env.*    # ignore all variations like .env.local, .env.production
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE and editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Test coverage
+coverage/
+
+# Misc
+.DS_Store
+Thumbs.db

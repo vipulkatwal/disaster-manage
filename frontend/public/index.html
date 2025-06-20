@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Response Platform - Backend Testing Interface</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #c82333;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .disaster-item {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .priority-critical { border-left: 5px solid #dc3545; }
+        .priority-high { border-left: 5px solid #fd7e14; }
+        .priority-medium { border-left: 5px solid #ffc107; }
+        .priority-low { border-left: 5px solid #28a745; }
+        .real-time-updates {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .update-item {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .tab.active {
+            border-bottom-color: #dc3545;
+            background-color: #f8f9fa;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚨 Disaster Response Platform - Backend Testing Interface</h1>
+    
+    <!-- Real-time Updates Panel -->
+    <div class="real-time-updates">
+        <h3>🔴 Real-time Updates</h3>
+        <div id="realTimeUpdates"></div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('disasters')">Disasters</div>
+        <div class="tab" onclick="showTab('reports')">Reports</div>
+        <div class="tab" onclick="showTab('resources')">Resources</div>
+        <div class="tab" onclick="showTab('social')">Social Media</div>
+        <div class="tab" onclick="showTab('ai')">AI Services</div>
+    </div>
+
+    <!-- Disasters Tab -->
+    <div id="disasters" class="tab-content active">
+        <div class="container">
+            <h2>Create Disaster Report</h2>
+            <form id="disasterForm">
+                <div class="form-group">
+                    <label for="title">Title:</label>
+                    <input type="text" id="title" name="title" required placeholder="e.g., Manhattan Flooding Emergency">
+                </div>
+                <div class="form-group">
+                    <label for="description">Description:</label>
+                    <textarea id="description" name="description" rows="4" required placeholder="Describe the disaster situation, affected areas, and immediate needs..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="location_name">Location (optional - will use AI extraction if empty):</label>
+                    <input type="text" id="location_name" name="location_name" placeholder="e.g., Manhattan, NYC">
+                </div>
+                <div class="form-group">
+                    <label for="tags">Tags (comma-separated):</label>
+                    <input type="text" id="tags" name="tags" placeholder="flood, urgent, evacuation">
+                </div>
+                <div class="form-group">
+                    <label for="priority">Priority:</label>
+                    <select id="priority" name="priority">
+                        <option value="low">Low</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="image_url">Evidence Image URL (optional):</label>
+                    <input type="url" id="image_url" name="image_url" placeholder="https://example.com/disaster-image.jpg">
+                </div>
+                <button type="submit">Create Disaster Report</button>
+                <button type="button" onclick="loadDisasters()">Refresh List</button>
+            </form>
+            <div id="disasterResult"></div>
+        </div>
+
+        <div class="container">
+            <h2>Disaster List</h2>
+            <div>
+                <label for="filterTag">Filter by Tag:</label>
+                <select id="filterTag" onchange="loadDisasters()">
+                    <option value="">All Tags</option>
+                    <option value="flood">Flood</option>
+                    <option value="fire">Fire</option>
+                    <option value="earthquake">Earthquake</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+                <label for="filterStatus">Filter by Status:</label>
+                <select id="filterStatus" onchange="loadDisasters()">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="monitoring">Monitoring</option>
+                    <option value="resolved">Resolved</option>
+                </select>
+            </div>
+            <div id="disastersList"></div>
+        </div>
+    </div>
+
+    <!-- Reports Tab -->
+    <div id="reports" class="tab-content">
+        <div class="container">
+            <h2>Submit Report</h2>
+            <form id="reportForm">
+                <div class="form-group">
+                    <label for="report_disaster_id">Disaster ID:</label>
+                    <input type="text" id="report_disaster_id" name="disaster_id" required placeholder="Select from disasters list above">
+                </div>
+                <div class="form-group">
+                    <label for="report_content">Report Content:</label>
+                    <textarea id="report_content" name="content" rows="4" required placeholder="Describe what you're seeing or experiencing..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="report_image_url">Image URL (optional):</label>
+                    <input type="url" id="report_image_url" name="image_url" placeholder="https://example.com/report-image.jpg">
+                </div>
+                <div class="form-group">
+                    <label for="report_location">Location (optional):</label>
+                    <input type="text" id="report_location" name="location_name" placeholder="Specific location of this report">
+                </div>
+                <button type="submit">Submit Report</button>
+            </form>
+            <div id="reportResult"></div>
+        </div>
+
+        <div class="container">
+            <h2>Recent Reports</h2>
+            <div id="reportsList"></div>
+        </div>
+    </div>
+
+    <!-- Resources Tab -->
+    <div id="resources" class="tab-content">
+        <div class="container">
+            <h2>Find Nearby Resources</h2>
+            <form id="resourceSearchForm">
+                <div class="form-group">
+                    <label for="search_lat">Latitude:</label>
+                    <input type="number" id="search_lat" name="lat" step="any" placeholder="40.7128" value="40.7128">
+                </div>
+                <div class="form-group">
+                    <label for="search_lng">Longitude:</label>
+                    <input type="number" id="search_lng" name="lng" step="any" placeholder="-74.0060" value="-74.0060">
+                </div>
+                <div class="form-group">
+                    <label for="search_radius">Radius (meters):</label>
+                    <input type="number" id="search_radius" name="radius" value="10000" placeholder="10000">
+                </div>
+                <div class="form-group">
+                    <label for="resource_type">Resource Type:</label>
+                    <select id="resource_type" name="type">
+                        <option value="">All Types</option>
+                        <option value="shelter">Shelter</option>
+                        <option value="medical">Medical</option>
+                        <option value="food">Food</option>
+                        <option value="supplies">Supplies</option>
+                        <option value="evacuation">Evacuation</option>
+                    </select>
+                </div>
+                <button type="submit">Search Resources</button>
+            </form>
+            <div id="resourcesResult"></div>
+        </div>
+    </div>
+
+    <!-- Social Media Tab -->
+    <div id="social" class="tab-content">
+        <div class="container">
+            <h2>Social Media Monitoring</h2>
+            <form id="socialSearchForm">
+                <div class="form-group">
+                    <label for="social_keywords">Keywords (comma-separated):</label>
+                    <input type="text" id="social_keywords" name="keywords" value="emergency, disaster, flood, help" placeholder="emergency, disaster, flood">
+                </div>
+                <div class="form-group">
+                    <label for="detect_misinfo">Detect Misinformation:</label>
+                    <input type="checkbox" id="detect_misinfo" name="detectMisinformation">
+                </div>
+                <button type="submit">Search Social Media</button>
+            </form>
+            <div id="socialResult"></div>
+        </div>
+
+        <div class="container">
+            <h2>Priority Alerts</h2>
+            <div id="priorityAlerts"></div>
+        </div>
+    </div>
+
+    <!-- AI Services Tab -->
+    <div id="ai" class="tab-content">
+        <div class="container">
+            <h2>AI Location Extraction</h2>
+            <form id="locationExtractionForm">
+                <div class="form-group">
+                    <label for="extract_text">Text to analyze:</label>
+                    <textarea id="extract_text" name="text" rows="3" placeholder="There's flooding on Houston Street near the subway station..."></textarea>
+                </div>
+                <button type="submit">Extract Location</button>
+            </form>
+            <div id="locationResult"></div>
+        </div>
+
+        <div class="container">
+            <h2>Urgency Classification</h2>
+            <form id="urgencyForm">
+                <div class="form-group">
+                    <label for="urgency_text">Text to classify:</label>
+                    <textarea id="urgency_text" name="text" rows="3" placeholder="URGENT: Need immediate help! People trapped in building!"></textarea>
+                </div>
+                <button type="submit">Classify Urgency</button>
+            </form>
+            <div id="urgencyResult"></div>
+        </div>
+
+        <div class="container">
+            <h2>Image Verification</h2>
+            <form id="imageVerificationForm">
+                <div class="form-group">
+                    <label for="verify_image_url">Image URL:</label>
+                    <input type="url" id="verify_image_url" name="imageUrl" placeholder="https://example.com/disaster-image.jpg">
+                </div>
+                <div class="form-group">
+                    <label for="verify_disaster_id">Disaster ID (optional):</label>
+                    <input type="text" id="verify_disaster_id" name="disasterId" placeholder="Will update disaster verification status">
+                </div>
+                <button type="submit">Verify Image</button>
+            </form>
+            <div id="imageVerificationResult"></div>
+        </div>
+
+        <div class="container">
+            <h2>Geocoding Service</h2>
+            <form id="geocodingForm">
+                <div class="form-group">
+                    <label for="geocode_location">Location Name:</label>
+                    <input type="text" id="geocode_location" name="location" placeholder="Manhattan, NYC">
+                </div>
+                <button type="submit">Get Coordinates</button>
+            </form>
+            <div id="geocodingResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        const socket = io('http://localhost:3001');
+
+        // Socket.IO Real-time Updates
+        socket.on('connect', () => {
+            addRealTimeUpdate('🟢 Connected to real-time server');
+        });
+
+        socket.on('disaster_updated', (data) => {
+            addRealTimeUpdate(`🚨 Disaster Updated: ${data.title || 'Unknown'}`);
+            loadDisasters(); // Refresh disasters list
+        });
+
+        socket.on('social_media_updated', (data) => {
+            addRealTimeUpdate(`📱 Social Media Alert: ${data.type || 'New posts detected'}`);
+        });
+
+        socket.on('resources_updated', (data) => {
+            addRealTimeUpdate(`🏥 Resource Updated: ${data.name || 'Unknown resource'}`);
+        });
+
+        socket.on('emergency_alert', (data) => {
+            addRealTimeUpdate(`🚨 EMERGENCY: ${data.title}`);
+            alert(`EMERGENCY ALERT: ${data.title}\n${data.message}`);
+        });
+
+        function addRealTimeUpdate(message) {
+            const updatesDiv = document.getElementById('realTimeUpdates');
+            const updateItem = document.createElement('div');
+            updateItem.className = 'update-item';
+            updateItem.innerHTML = `${new Date().toLocaleTimeString()}: ${message}`;
+            updatesDiv.insertBefore(updateItem, updatesDiv.firstChild);
+            
+            // Keep only last 10 updates
+            while (updatesDiv.children.length > 10) {
+                updatesDiv.removeChild(updatesDiv.lastChild);
+            }
+        }
+
+        // Tab Navigation
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Utility Functions
+        function showResult(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${isError ? 'error' : 'success'}">${message}</div>`;
+        }
+
+        function formatJSON(obj) {
+            return `<pre>${JSON.stringify(obj, null, 2)}</pre>`;
+        }
+
+        // Disaster Management
+        document.getElementById('disasterForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                title: formData.get('title'),
+                description: formData.get('description'),
+                location_name: formData.get('location_name'),
+                tags: formData.get('tags') ? formData.get('tags').split(',').map(t => t.trim()) : [],
+                priority: formData.get('priority'),
+                image_url: formData.get('image_url')
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/disasters`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('disasterResult', `✅ Disaster created successfully! ID: ${result.id}`);
+                    e.target.reset();
+                    loadDisasters();
+                } else {
+                    showResult('disasterResult', `❌ Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                showResult('disasterResult', `❌ Network error: ${error.message}`, true);
+            }
+        });
+
+        async function loadDisasters() {
+            try {
+                const tag = document.getElementById('filterTag').value;
+                const status = document.getElementById('filterStatus').value;
+                
+                let url = `${API_BASE}/disasters`;
+                const params = new URLSearchParams();
+                if (tag) params.append('tag', tag);
+                if (status) params.append('status', status);
+                if (params.toString()) url += '?' + params.toString();
+
+                const response = await fetch(url);
+                const disasters = await response.json();
+
+                const listDiv = document.getElementById('disastersList');
+                if (disasters.length === 0) {
+                    listDiv.innerHTML = '<p>No disasters found.</p>';
+                    return;
+                }
+
+                listDiv.innerHTML = disasters.map(disaster => `
+                    <div class="disaster-item priority-${disaster.priority}">
+                        <h3>${disaster.title}</h3>
+                        <p><strong>Location:</strong> ${disaster.location_name}</p>
+                        <p><strong>Description:</strong> ${disaster.description}</p>
+                        <p><strong>Priority:</strong> <span style="text-transform: uppercase; font-weight: bold;">${disaster.priority}</span></p>
+                        <p><strong>Status:</strong> ${disaster.status}</p>
+                        <p><strong>Tags:</strong> ${disaster.tags.join(', ')}</p>
+                        <p><strong>Owner:</strong> ${disaster.owner_id}</p>
+                        <p><strong>Verification:</strong> ${disaster.verification_status}</p>
+                        <p><strong>Created:</strong> ${new Date(disaster.created_at).toLocaleString()}</p>
+                        <p><strong>ID:</strong> <code>${disaster.id}</code></p>
+                        <button onclick="loadSocialMedia('${disaster.id}')">Load Social Media</button>
+                        <button onclick="loadResources('${disaster.id}')">Load Resources</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('disastersList').innerHTML = `<p class="error">Error loading disasters: ${error.message}</p>`;
+            }
+        }
+
+        // Reports Management
+        document.getElementById('reportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                disaster_id: formData.get('disaster_id'),
+                content: formData.get('content'),
+                image_url: formData.get('image_url'),
+                location_name: formData.get('location_name')
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/reports`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('reportResult', `✅ Report submitted successfully! ID: ${result.id}`);
+                    e.target.reset();
+                    loadReports();
+                } else {
+                    showResult('reportResult', `❌ Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                showResult('reportResult', `❌ Network error: ${error.message}`, true);
+            }
+        });
+
+        async function loadReports() {
+            try {
+                const response = await fetch(`${API_BASE}/reports`);
+                const reports = await response.json();
+
+                const listDiv = document.getElementById('reportsList');
+                if (reports.length === 0) {
+                    listDiv.innerHTML = '<p>No reports found.</p>';
+                    return;
+                }
+
+                listDiv.innerHTML = reports.slice(0, 10).map(report => `
+                    <div class="disaster-item">
+                        <p><strong>Content:</strong> ${report.content}</p>
+                        <p><strong>Priority:</strong> ${report.priority}</p>
+                        <p><strong>Location:</strong> ${report.location_name || 'Not specified'}</p>
+                        <p><strong>User:</strong> ${report.user_id}</p>
+                        <p><strong>Verification:</strong> ${report.verification_status}</p>
+                        <p><strong>Created:</strong> ${new Date(report.created_at).toLocaleString()}</p>
+                    </div>
+                `).join('');
+            } catch (error) {
+                document.getElementById('reportsList').innerHTML = `<p class="error">Error loading reports: ${error.message}</p>`;
+            }
+        }
+
+        // Resource Search
+        document.getElementById('resourceSearchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            
+            const params = new URLSearchParams();
+            params.append('lat', formData.get('lat'));
+            params.append('lng', formData.get('lng'));
+            params.append('radius', formData.get('radius'));
+            if (formData.get('type')) params.append('type', formData.get('type'));
+
+            try {
+                const response = await fetch(`${API_BASE}/resources?${params}`);
+                const resources = await response.json();
+
+                const resultDiv = document.getElementById('resourcesResult');
+                if (resources.length === 0) {
+                    resultDiv.innerHTML = '<p>No resources found in the specified area.</p>';
+                    return;
+                }
+
+                resultDiv.innerHTML = `
+                    <h3>Found ${resources.length} resources:</h3>
+                    ${resources.map(resource => `
+                        <div class="disaster-item">
+                            <h4>${resource.name}</h4>
+                            <p><strong>Type:</strong> ${resource.type}</p>
+                            <p><strong>Location:</strong> ${resource.location_name}</p>
+                            <p><strong>Status:</strong> ${resource.status}</p>
+                            ${resource.capacity ? `<p><strong>Capacity:</strong> ${resource.current_occupancy}/${resource.capacity}</p>` : ''}
+                            <p><strong>Contact:</strong> ${resource.contact}</p>
+                            <p><strong>Hours:</strong> ${resource.hours}</p>
+                            <p><strong>Services:</strong> ${resource.services.join(', ')}</p>
+                            ${resource.distance_meters ? `<p><strong>Distance:</strong> ${Math.round(resource.distance_meters)}m</p>` : ''}
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                showResult('resourcesResult', `❌ Error: ${error.message}`, true);
+            }
+        });
+
+        // Social Media Search
+        document.getElementById('socialSearchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = {
+                keywords: formData.get('keywords').split(',').map(k => k.trim()),
+                detectMisinformation: formData.get('detectMisinformation') === 'on'
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/social-media/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    const resultDiv = document.getElementById('socialResult');
+                    resultDiv.innerHTML = `
+                        <h3>Social Media Results (${result.metadata.total} posts)</h3>
+                        <p><strong>Urgent:</strong> ${result.metadata.urgent} | <strong>Verified:</strong> ${result.metadata.verified} | <strong>Suspicious:</strong> ${result.metadata.suspicious}</p>
+                        ${result.posts.map(post => `
+                            <div class="disaster-item priority-${post.urgency}">
+                                <p><strong>${post.platform.toUpperCase()}</strong> - @${post.author} ${post.verified ? '✓' : ''}</p>
+                                <p>${post.content}</p>
+                                <p><strong>Urgency:</strong> ${post.urgency} | <strong>Engagement:</strong> ${post.engagement.total}</p>
+                                ${post.location ? `<p><strong>Location:</strong> ${post.location}</p>` : ''}
+                                <p><strong>Hashtags:</strong> ${post.hashtags.map(h => '#' + h).join(' ')}</p>
+                                ${post.misinformationFlags ? `<p class="error"><strong>⚠️ Suspicious:</strong> ${post.misinformationFlags.reasons.join(', ')}</p>` : ''}
+                                <p><small>${new Date(post.timestamp).toLocaleString()}</small></p>
+                            </div>
+                        `).join('')}
+                    `;
+
+                    // Update priority alerts
+                    const urgentPosts = result.posts.filter(p => ['high', 'critical'].includes(p.urgency));
+                    if (urgentPosts.length > 0) {
+                        document.getElementById('priorityAlerts').innerHTML = `
+                            <h3>🚨 Priority Alerts (${urgentPosts.length})</h3>
+                            ${urgentPosts.map(post => `
+                                <div class="disaster-item priority-${post.urgency}">
+                                    <p><strong>URGENT:</strong> ${post.content.substring(0, 100)}...</p>
+                                    <p><strong>Keywords:</strong> ${post.urgencyKeywords ? post.urgencyKeywords.join(', ') : 'N/A'}</p>
+                                </div>
+                            `).join('')}
+                        `;
+                    }
+                } else {
+                    showResult('socialResult', `❌ Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                showResult('socialResult', `❌ Network error: ${error.message}`, true);
+            }
+        });
+
+        // AI Services
+        document.getElementById('locationExtractionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch(`${API_BASE}/ai/extract-location`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: formData.get('text') })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('locationResult', `✅ Extracted Location: "${result.location}"`);
+                } else {
+                    showResult('locationResult', `❌ Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                showResult('locationResult', `❌ Network error: ${error.message}`, true);
+            }
+        });
+
+        document.getElementById('urgencyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch(`${API_BASE}/ai/classify-urgency`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: formData.get('text') })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('urgencyResult', `
+                        ✅ Urgency Classification:<br>
+                        <strong>Level:</strong> ${result.urgency}<br>
+                        <strong>Keywords:</strong> ${result.keywords.join(', ')}<br>
+                        <strong>Reasoning:</strong> ${result.reasoning}
+                    `);
+                } else {
+                    showResult('urgencyResult', `❌ Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                showResult('urgencyResult', `❌ Network error: ${error.message}`, true);
+            }
+        });
+
+        document.getElementById('imageVerificationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch(`${API_BASE}/ai/verify-image`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        imageUrl: formData.get('imageUrl'),
+                        disasterId: formData.get('disasterId')
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    showResult('imageVerificationResult', `
+                        ✅ Image Verification:<br>
+                        <strong>Authentic:</strong> ${result.isAuthentic ? 'Yes' : 'No'}<br>
+                        <strong>Confidence:</strong> ${result.confidence}%<br>
+                        <strong>Reasoning:</strong> ${result.reasoning}
+                    `);
+                } else {
+                    showResult('imageVerificationResult', `❌ Error: ${result.error}`, true);
+                }
+            } catch (error) {
+                showResult('imageVerificationResult', `❌ Network error: ${error.message}`, true);
+            }
+        });
+
+        document.getElementById('geocodingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch(`${API_BASE}/geocode`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ location: formData.get('location') })
+                });
+
+                const result = await response.json();
+                if (response.ok && result) {
+                    showResult('geocodingResult', `
+                        ✅ Coordinates Found:<br>
+                        <strong>Latitude:</strong> ${result.lat}<br>
+                        <strong>Longitude:</strong> ${result.lng}
+                    `);
+                } else {
+                    showResult('geocodingResult', `❌ Location not found`, true);
+                }
+            } catch (error) {
+                showResult('geocodingResult', `❌ Network error: ${error.message}`, true);
+            }
+        });
+
+        // Helper functions for disaster-specific actions
+        async function loadSocialMedia(disasterId) {
+            try {
+                const response = await fetch(`${API_BASE}/disasters/${disasterId}/social-media`);
+                const posts = await response.json();
+                
+                alert(`Found ${posts.length} social media posts for this disaster. Check the Social Media tab for details.`);
+                
+                // Switch to social media tab and populate results
+                showTab('social');
+                document.getElementById('socialResult').innerHTML = `
+                    <h3>Social Media for Disaster ${disasterId}</h3>
+                    ${posts.map(post => `
+                        <div class="disaster-item priority-${post.urgency}">
+                            <p><strong>${post.platform.toUpperCase()}</strong> - @${post.author}</p>
+                            <p>${post.content}</p>
+                            <p><strong>Urgency:</strong> ${post.urgency}</p>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                alert(`Error loading social media: ${error.message}`);
+            }
+        }
+
+        async function loadResources(disasterId) {
+            try {
+                const response = await fetch(`${API_BASE}/disasters/${disasterId}/resources`);
+                const resources = await response.json();
+                
+                alert(`Found ${resources.length} resources for this disaster. Check the Resources tab for details.`);
+                
+                // Switch to resources tab and populate results
+                showTab('resources');
+                document.getElementById('resourcesResult').innerHTML = `
+                    <h3>Resources for Disaster ${disasterId}</h3>
+                    ${resources.map(resource => `
+                        <div class="disaster-item">
+                            <h4>${resource.name}</h4>
+                            <p><strong>Type:</strong> ${resource.type}</p>
+                            <p><strong>Location:</strong> ${resource.location_name}</p>
+                            <p><strong>Status:</strong> ${resource.status}</p>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                alert(`Error loading resources: ${error.message}`);
+            }
+        }
+
+        // Load initial data
+        window.addEventListener('load', () => {
+            loadDisasters();
+            loadReports();
+        });
+    </script>
+</body>
+</html>
