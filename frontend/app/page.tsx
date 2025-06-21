@@ -1,22 +1,32 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import React, { useState, useEffect, useCallback, useMemo, Suspense, lazy } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Badge } from "../components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { AlertTriangle, MapPin, Users, Clock, Plus, Zap } from "lucide-react"
-import DisasterForm from "@/components/disaster-form"
-import DisasterList from "@/components/disaster-list"
-import SocialMediaFeed from "@/components/social-media-feed"
-import ResourcesMap from "@/components/resources-map"
-import RealtimeUpdates from "@/components/realtime-updates"
-import { fetchDisasters } from "@/lib/api"
-import { socketManager } from "@/lib/socket"
+import DisasterForm from "../components/disaster-form"
+import { fetchDisasters } from "../lib/api"
+import { socketManager } from "../lib/socket"
 
 // Add the missing imports and components
-import NotificationSystem from "@/components/notification-system"
-import AnalyticsDashboard from "@/components/analytics-dashboard"
+import NotificationSystem from "../components/notification-system"
+
+// Lazy load heavy components
+const DisasterList = lazy(() => import("../components/disaster-list"))
+const SocialMediaFeed = lazy(() => import("../components/social-media-feed"))
+const ResourcesMap = lazy(() => import("../components/resources-map"))
+const RealtimeUpdates = lazy(() => import("../components/realtime-updates"))
+const AnalyticsDashboard = lazy(() => import("../components/analytics-dashboard"))
+const OfficialUpdatesFeed = lazy(() => import("../components/official-updates-feed"))
+
+// Loading component for lazy-loaded components
+const TabLoading = () => (
+  <div className="flex items-center justify-center py-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+  </div>
+)
 
 export default function DisasterResponseDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -152,9 +162,10 @@ export default function DisasterResponseDashboard() {
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           {/* Add Analytics tab to the TabsList: */}
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="disasters">Disasters</TabsTrigger>
+            <TabsTrigger value="updates">Official Updates</TabsTrigger>
             <TabsTrigger value="social">Social Feed</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -179,7 +190,9 @@ export default function DisasterResponseDashboard() {
                   <CardTitle>Recent Disasters</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <DisasterList limit={5} onRefresh={() => setRefreshKey((prev) => prev + 1)} />
+                  <Suspense fallback={<TabLoading />}>
+                    <DisasterList limit={5} onRefresh={() => setRefreshKey((prev) => prev + 1)} />
+                  </Suspense>
                 </CardContent>
               </Card>
             </div>
@@ -191,7 +204,22 @@ export default function DisasterResponseDashboard() {
                 <CardTitle>Disaster Management</CardTitle>
               </CardHeader>
               <CardContent>
-                <DisasterList key={refreshKey} onRefresh={() => setRefreshKey((prev) => prev + 1)} />
+                <Suspense fallback={<TabLoading />}>
+                  <DisasterList key={refreshKey} onRefresh={() => setRefreshKey((prev) => prev + 1)} />
+                </Suspense>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="updates">
+            <Card>
+              <CardHeader>
+                <CardTitle>Official Updates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Suspense fallback={<TabLoading />}>
+                  <OfficialUpdatesFeed />
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
@@ -202,7 +230,9 @@ export default function DisasterResponseDashboard() {
                 <CardTitle>Social Media Intelligence</CardTitle>
               </CardHeader>
               <CardContent>
-                <SocialMediaFeed />
+                <Suspense fallback={<TabLoading />}>
+                  <SocialMediaFeed />
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
@@ -213,14 +243,18 @@ export default function DisasterResponseDashboard() {
                 <CardTitle>Resource Deployment Map</CardTitle>
               </CardHeader>
               <CardContent>
-                <ResourcesMap />
+                <Suspense fallback={<TabLoading />}>
+                  <ResourcesMap />
+                </Suspense>
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Add Analytics TabsContent after the resources tab: */}
           <TabsContent value="analytics">
-            <AnalyticsDashboard />
+            <Suspense fallback={<TabLoading />}>
+              <AnalyticsDashboard />
+            </Suspense>
           </TabsContent>
         </Tabs>
       </div>

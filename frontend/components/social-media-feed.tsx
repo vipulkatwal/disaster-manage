@@ -1,34 +1,52 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
+import { Card, CardContent } from "./ui/card"
+import { Badge } from "./ui/badge"
+import { Button } from "./ui/button"
 import { Heart, MessageCircle, Repeat2, ExternalLink, AlertTriangle } from "lucide-react"
-import { getSocialMedia, type SocialPost } from "@/lib/api"
-import { socketManager } from "@/lib/socket"
+import { getSocialMedia, type SocialPost } from "../lib/api"
+import { socketManager } from "../lib/socket"
+
+// Debounce hook for search/filter operations
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 export default function SocialMediaFeed() {
   const [posts, setPosts] = useState<SocialPost[]>([])
   const [filter, setFilter] = useState<"all" | "urgent" | "verified">("all")
   const [loading, setLoading] = useState(true)
 
+  // Memoize the social media update handler
+  const handleSocialUpdate = useCallback((data: any) => {
+    setPosts((prev) => [data, ...prev.slice(0, 19)]) // Keep 20 most recent
+  }, [])
+
   useEffect(() => {
     loadSocialMedia()
 
     // Set up real-time updates
-    const handleSocialUpdate = (data: any) => {
-      setPosts((prev) => [data, ...prev.slice(0, 19)]) // Keep 20 most recent
-    }
-
     socketManager.on("social_media_updated", handleSocialUpdate)
 
     return () => {
       socketManager.off("social_media_updated", handleSocialUpdate)
     }
-  }, [])
+  }, [handleSocialUpdate])
 
-  const loadSocialMedia = async () => {
+  const loadSocialMedia = useCallback(async () => {
     try {
       setLoading(true)
       // For demo, we'll use a mock disaster ID
@@ -69,15 +87,19 @@ export default function SocialMediaFeed() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const filteredPosts = posts.filter((post) => {
-    if (filter === "urgent") return ["high", "critical"].includes(post.urgency)
-    if (filter === "verified") return post.verified
-    return true
-  })
+  // Memoize filtered posts to prevent unnecessary re-computations
+  const filteredPosts = useMemo(() => {
+    return posts.filter((post) => {
+      if (filter === "urgent") return ["high", "critical"].includes(post.urgency)
+      if (filter === "verified") return post.verified
+      return true
+    })
+  }, [posts, filter])
 
-  const getPlatformColor = (platform: string) => {
+  // Memoize utility functions
+  const getPlatformColor = useCallback((platform: string) => {
     switch (platform) {
       case "twitter":
         return "bg-blue-500"
@@ -88,9 +110,9 @@ export default function SocialMediaFeed() {
       default:
         return "bg-gray-500"
     }
-  }
+  }, [])
 
-  const getUrgencyColor = (urgency: string) => {
+  const getUrgencyColor = useCallback((urgency: string) => {
     switch (urgency) {
       case "critical":
         return "bg-red-600 text-white"
@@ -103,7 +125,31 @@ export default function SocialMediaFeed() {
       default:
         return "bg-gray-600 text-white"
     }
-  }
+  }, [])
+
+  // Memoize filter buttons to prevent re-renders
+  const filterButtons = useMemo(() => [
+    {
+      key: "all",
+      label: "All Posts",
+      variant: filter === "all" ? "default" : "outline",
+      onClick: () => setFilter("all"),
+    },
+    {
+      key: "urgent",
+      label: "Urgent",
+      variant: filter === "urgent" ? "default" : "outline",
+      onClick: () => setFilter("urgent"),
+      className: "text-red-600 border-red-600 hover:bg-red-50",
+      icon: AlertTriangle,
+    },
+    {
+      key: "verified",
+      label: "Verified Only",
+      variant: filter === "verified" ? "default" : "outline",
+      onClick: () => setFilter("verified"),
+    },
+  ], [filter])
 
   if (loading) {
     return <div className="text-center py-8">Loading social media feed...</div>
@@ -112,21 +158,18 @@ export default function SocialMediaFeed() {
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        <Button variant={filter === "all" ? "default" : "outline"} size="sm" onClick={() => setFilter("all")}>
-          All Posts
-        </Button>
-        <Button
-          variant={filter === "urgent" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("urgent")}
-          className="text-red-600 border-red-600 hover:bg-red-50"
-        >
-          <AlertTriangle className="h-4 w-4 mr-1" />
-          Urgent
-        </Button>
-        <Button variant={filter === "verified" ? "default" : "outline"} size="sm" onClick={() => setFilter("verified")}>
-          Verified Only
-        </Button>
+        {filterButtons.map((button) => (
+          <Button
+            key={button.key}
+            variant={button.variant as any}
+            size="sm"
+            onClick={button.onClick}
+            className={button.className}
+          >
+            {button.icon && <button.icon className="h-4 w-4 mr-1" />}
+            {button.label}
+          </Button>
+        ))}
       </div>
 
       <div className="space-y-4">

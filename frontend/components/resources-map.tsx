@@ -1,66 +1,86 @@
 "use client"
 
-import React from "react"
-import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
+import { Card, CardContent } from "./ui/card"
+import { Badge } from "./ui/badge"
+import { Button } from "./ui/button"
+import { Input } from "./ui/input"
 import { MapPin, Navigation, Phone, Clock, Users } from "lucide-react"
-import { getNearbyResources, type Resource } from "@/lib/api"
-import { socketManager } from "@/lib/socket"
-import ResourcesMapView from "@/components/resources-map-view"
+import { getNearbyResources, type Resource } from "../lib/api"
+import { socketManager } from "../lib/socket"
+import ResourcesMapView from "./resources-map-view"
+
+// Debounce hook for search operations
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value)
+    }, delay)
+
+    return () => {
+      clearTimeout(handler)
+    }
+  }, [value, delay])
+
+  return debouncedValue
+}
 
 export default function ResourcesMap() {
   const [resources, setResources] = useState<Resource[]>([])
-  const [filteredResources, setFilteredResources] = useState<Resource[]>([])
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [searchLocation, setSearchLocation] = useState("")
   const [loading, setLoading] = useState(true)
+
+  // Debounce search input to reduce filtering operations
+  const debouncedSearchLocation = useDebounce(searchLocation, 300)
+
+  // Memoize the resource update handler
+  const handleResourceUpdate = useCallback((data: any) => {
+    setResources((prev) => {
+      const index = prev.findIndex((r) => r.id === data.id)
+      if (index >= 0) {
+        const updated = [...prev]
+        updated[index] = data
+        return updated
+      } else {
+        return [data, ...prev]
+      }
+    })
+  }, [])
 
   useEffect(() => {
     loadResources()
 
     // Set up real-time updates
-    const handleResourceUpdate = (data: any) => {
-      setResources((prev) => {
-        const index = prev.findIndex((r) => r.id === data.id)
-        if (index >= 0) {
-          const updated = [...prev]
-          updated[index] = data
-          return updated
-        } else {
-          return [data, ...prev]
-        }
-      })
-    }
-
     socketManager.on("resources_updated", handleResourceUpdate)
 
     return () => {
       socketManager.off("resources_updated", handleResourceUpdate)
     }
-  }, [])
+  }, [handleResourceUpdate])
 
-  useEffect(() => {
+  // Memoize filtered resources to prevent unnecessary re-computations
+  const filteredResources = useMemo(() => {
     let filtered = resources
 
     if (selectedType) {
       filtered = filtered.filter((resource) => resource.type === selectedType)
     }
 
-    if (searchLocation) {
+    if (debouncedSearchLocation) {
       filtered = filtered.filter(
         (resource) =>
-          resource.location_name.toLowerCase().includes(searchLocation.toLowerCase()) ||
-          resource.name.toLowerCase().includes(searchLocation.toLowerCase()),
+          resource.location_name.toLowerCase().includes(debouncedSearchLocation.toLowerCase()) ||
+          resource.name.toLowerCase().includes(debouncedSearchLocation.toLowerCase()),
       )
     }
 
-    setFilteredResources(filtered)
-  }, [resources, selectedType, searchLocation])
+    return filtered
+  }, [resources, selectedType, debouncedSearchLocation])
 
-  const loadResources = async () => {
+  const loadResources = useCallback(async () => {
     try {
       setLoading(true)
       // For demo, we'll use a mock disaster ID
@@ -99,9 +119,10 @@ export default function ResourcesMap() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const getTypeColor = (type: string) => {
+  // Memoize utility functions
+  const getTypeColor = useCallback((type: string) => {
     switch (type) {
       case "shelter":
         return "bg-blue-600 text-white"
@@ -116,9 +137,9 @@ export default function ResourcesMap() {
       default:
         return "bg-gray-600 text-white"
     }
-  }
+  }, [])
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case "available":
         return "bg-green-100 text-green-800 border-green-200"
@@ -129,9 +150,26 @@ export default function ResourcesMap() {
       default:
         return "bg-gray-100 text-gray-800 border-gray-200"
     }
-  }
+  }, [])
 
-  const resourceTypes = ["shelter", "medical", "food", "supplies", "evacuation"]
+  // Memoize resource types to prevent re-renders
+  const resourceTypes = useMemo(() => ["shelter", "medical", "food", "supplies", "evacuation"], [])
+
+  // Memoize type buttons to prevent re-renders
+  const typeButtons = useMemo(() => [
+    {
+      key: "all",
+      label: "All Types",
+      type: null,
+      variant: selectedType === null ? "default" : "outline",
+    },
+    ...resourceTypes.map((type) => ({
+      key: type,
+      label: type,
+      type,
+      variant: selectedType === type ? "default" : "outline",
+    })),
+  ], [selectedType, resourceTypes])
 
   if (loading) {
     return <div className="text-center py-8">Loading resources...</div>
@@ -147,21 +185,14 @@ export default function ResourcesMap() {
           className="flex-1"
         />
         <div className="flex flex-wrap gap-2">
-          <Button
-            variant={selectedType === null ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSelectedType(null)}
-          >
-            All Types
-          </Button>
-          {resourceTypes.map((type) => (
+          {typeButtons.map((button) => (
             <Button
-              key={type}
-              variant={selectedType === type ? "default" : "outline"}
+              key={button.key}
+              variant={button.variant as any}
               size="sm"
-              onClick={() => setSelectedType(type)}
+              onClick={() => setSelectedType(button.type)}
             >
-              {type}
+              {button.label}
             </Button>
           ))}
         </div>
@@ -202,31 +233,34 @@ export default function ResourcesMap() {
                   {resource.capacity && (
                     <div className="flex items-center text-sm text-gray-600 mb-3">
                       <Users className="h-4 w-4 mr-1" />
-                      Capacity: {resource.current_occupancy}/{resource.capacity}
-                      <div className="ml-2 flex-1 max-w-32">
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${(resource.current_occupancy! / resource.capacity) * 100}%` }}
-                          ></div>
-                        </div>
+                      {resource.current_occupancy}/{resource.capacity} occupied
+                    </div>
+                  )}
+
+                  {resource.services && resource.services.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-medium text-gray-700 mb-2">Services:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {resource.services.map((service) => (
+                          <Badge key={service} variant="outline" className="text-xs">
+                            {service}
+                          </Badge>
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-2">
-                    {resource.services.map((service) => (
-                      <Badge key={service} variant="secondary" className="text-xs">
-                        {service}
-                      </Badge>
-                    ))}
+                  <div className="flex gap-2">
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      <Navigation className="h-4 w-4 mr-1" />
+                      Get Directions
+                    </Button>
+                    <Button size="sm" variant="outline">
+                      <Phone className="h-4 w-4 mr-1" />
+                      Call
+                    </Button>
                   </div>
                 </div>
-
-                <Button variant="outline" size="sm" className="ml-4">
-                  <Navigation className="h-4 w-4 mr-1" />
-                  Directions
-                </Button>
               </div>
             </CardContent>
           </Card>

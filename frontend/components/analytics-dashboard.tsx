@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import React, { useState, useEffect, useCallback, useMemo } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Button } from "./ui/button"
+import { Badge } from "./ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs"
 import {
   BarChart,
   Bar,
@@ -56,11 +56,7 @@ export default function AnalyticsDashboard() {
   const [timeframe, setTimeframe] = useState("24h")
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadAnalytics()
-  }, [timeframe])
-
-  const loadAnalytics = async () => {
+  const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch(`/api/analytics/dashboard?timeframe=${timeframe}`)
@@ -71,39 +67,99 @@ export default function AnalyticsDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [timeframe])
+
+  useEffect(() => {
+    loadAnalytics()
+  }, [loadAnalytics])
+
+  // Memoize chart colors
+  const COLORS = useMemo(() => ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6"], [])
+
+  // Memoize processed chart data
+  const chartData = useMemo(() => {
+    if (!data) return null
+
+    const priorityData = Object.entries(data.disastersByPriority).map(([priority, count]) => ({
+      priority,
+      count,
+      color:
+        {
+          critical: "#ef4444",
+          high: "#f97316",
+          medium: "#eab308",
+          low: "#22c55e",
+        }[priority] || "#6b7280",
+    }))
+
+    const statusData = Object.entries(data.disastersByStatus).map(([status, count]) => ({
+      status,
+      count,
+    }))
+
+    const tagData = Object.entries(data.topTags)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8)
+
+    return { priorityData, statusData, tagData }
+  }, [data])
+
+  // Memoize timeframe buttons
+  const timeframeButtons = useMemo(() => [
+    { key: "1h", label: "1h" },
+    { key: "24h", label: "24h" },
+    { key: "7d", label: "7d" },
+    { key: "30d", label: "30d" },
+  ], [])
+
+  // Memoize overview cards
+  const overviewCards = useMemo(() => {
+    if (!data) return []
+
+    return [
+      {
+        title: "Total Disasters",
+        value: data.overview.totalDisasters,
+        subtitle: `${data.overview.activeDisasters} active`,
+        color: "text-gray-900",
+        icon: AlertTriangle,
+        iconColor: "text-red-600",
+      },
+      {
+        title: "Total Reports",
+        value: data.overview.totalReports,
+        subtitle: `${data.overview.verificationRate}% verified`,
+        color: "text-blue-600",
+        icon: Users,
+        iconColor: "text-blue-600",
+      },
+      {
+        title: "Resources",
+        value: data.overview.totalResources,
+        subtitle: "Available",
+        color: "text-green-600",
+        icon: MapPin,
+        iconColor: "text-green-600",
+      },
+      {
+        title: "Avg Response",
+        value: data.overview.averageResponseTime,
+        subtitle: "Response time",
+        color: "text-purple-600",
+        icon: Clock,
+        iconColor: "text-purple-600",
+      },
+    ]
+  }, [data])
 
   if (loading) {
     return <div className="text-center py-8">Loading analytics...</div>
   }
 
-  if (!data) {
+  if (!data || !chartData) {
     return <div className="text-center py-8">Failed to load analytics data</div>
   }
-
-  const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6"]
-
-  const priorityData = Object.entries(data.disastersByPriority).map(([priority, count]) => ({
-    priority,
-    count,
-    color:
-      {
-        critical: "#ef4444",
-        high: "#f97316",
-        medium: "#eab308",
-        low: "#22c55e",
-      }[priority] || "#6b7280",
-  }))
-
-  const statusData = Object.entries(data.disastersByStatus).map(([status, count]) => ({
-    status,
-    count,
-  }))
-
-  const tagData = Object.entries(data.topTags)
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8)
 
   return (
     <div className="space-y-6">
@@ -111,14 +167,14 @@ export default function AnalyticsDashboard() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
         <div className="flex gap-2">
-          {["1h", "24h", "7d", "30d"].map((tf) => (
+          {timeframeButtons.map((button) => (
             <Button
-              key={tf}
-              variant={timeframe === tf ? "default" : "outline"}
+              key={button.key}
+              variant={timeframe === button.key ? "default" : "outline"}
               size="sm"
-              onClick={() => setTimeframe(tf)}
+              onClick={() => setTimeframe(button.key)}
             >
-              {tf}
+              {button.label}
             </Button>
           ))}
         </div>
@@ -126,57 +182,23 @@ export default function AnalyticsDashboard() {
 
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Disasters</p>
-                <p className="text-3xl font-bold text-gray-900">{data.overview.totalDisasters}</p>
-                <p className="text-sm text-gray-500">{data.overview.activeDisasters} active</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-red-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Reports</p>
-                <p className="text-3xl font-bold text-blue-600">{data.overview.totalReports}</p>
-                <p className="text-sm text-gray-500">{data.overview.verificationRate}% verified</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Resources</p>
-                <p className="text-3xl font-bold text-green-600">{data.overview.totalResources}</p>
-                <p className="text-sm text-gray-500">Available</p>
-              </div>
-              <MapPin className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avg Response</p>
-                <p className="text-3xl font-bold text-purple-600">{data.overview.averageResponseTime}</p>
-                <p className="text-sm text-gray-500">Response time</p>
-              </div>
-              <Clock className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
+        {overviewCards.map((card, index) => {
+          const IconComponent = card.icon
+          return (
+            <Card key={index}>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                    <p className={`text-3xl font-bold ${card.color}`}>{card.value}</p>
+                    <p className="text-sm text-gray-500">{card.subtitle}</p>
+                  </div>
+                  <IconComponent className={`h-8 w-8 ${card.iconColor}`} />
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
       </div>
 
       {/* Charts */}
@@ -201,22 +223,9 @@ export default function AnalyticsDashboard() {
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
-                    <Area
-                      type="monotone"
-                      dataKey="disasters"
-                      stackId="1"
-                      stroke="#3b82f6"
-                      fill="#3b82f6"
-                      fillOpacity={0.6}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="critical"
-                      stackId="2"
-                      stroke="#ef4444"
-                      fill="#ef4444"
-                      fillOpacity={0.8}
-                    />
+                    <Area type="monotone" dataKey="disasters" stackId="1" stroke="#ef4444" fill="#ef4444" />
+                    <Area type="monotone" dataKey="reports" stackId="1" stroke="#3b82f6" fill="#3b82f6" />
+                    <Area type="monotone" dataKey="critical" stackId="1" stroke="#dc2626" fill="#dc2626" />
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -224,20 +233,16 @@ export default function AnalyticsDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Priority Distribution</CardTitle>
+                <CardTitle>Top Tags</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={priorityData}>
+                  <BarChart data={chartData.tagData}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="priority" />
+                    <XAxis dataKey="tag" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#8884d8">
-                      {priorityData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Bar>
+                    <Bar dataKey="count" fill="#3b82f6" />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -249,23 +254,23 @@ export default function AnalyticsDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Status Distribution</CardTitle>
+                <CardTitle>Disasters by Priority</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
                     <Pie
-                      data={statusData}
+                      data={chartData.priorityData}
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ status, count }) => `${status}: ${count}`}
+                      label={({ priority, percent }) => `${priority} ${(percent * 100).toFixed(0)}%`}
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="count"
                     >
-                      {statusData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      {chartData.priorityData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -276,85 +281,48 @@ export default function AnalyticsDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Top Tags</CardTitle>
+                <CardTitle>Disasters by Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {tagData.map((item, index) => (
-                    <div key={item.tag} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">#{item.tag}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${(item.count / tagData[0].count) * 100}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm font-medium w-8">{item.count}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={chartData.statusData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="status" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="count" fill="#22c55e" />
+                  </BarChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="verification" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Verification Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      <span className="font-medium">Verified</span>
-                    </div>
-                    <span className="text-2xl font-bold text-green-600">{data.verificationMetrics.verified}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Clock className="h-5 w-5 text-yellow-600" />
-                      <span className="font-medium">Pending</span>
-                    </div>
-                    <span className="text-2xl font-bold text-yellow-600">{data.verificationMetrics.pending}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <AlertTriangle className="h-5 w-5 text-red-600" />
-                      <span className="font-medium">Suspicious</span>
-                    </div>
-                    <span className="text-2xl font-bold text-red-600">{data.verificationMetrics.suspicious}</span>
-                  </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Verification Metrics</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">{data.verificationMetrics.verified}</div>
+                  <div className="text-sm text-gray-600">Verified Reports</div>
+                  <CheckCircle className="h-8 w-8 text-green-600 mx-auto mt-2" />
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Verification Rate Trend</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-center h-48">
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600 mb-2">{data.overview.verificationRate}%</div>
-                    <p className="text-gray-600">Overall Verification Rate</p>
-                    <div className="flex items-center justify-center mt-2">
-                      <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                      <span className="text-sm text-green-600">+5% from last period</span>
-                    </div>
-                  </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-yellow-600">{data.verificationMetrics.pending}</div>
+                  <div className="text-sm text-gray-600">Pending Review</div>
+                  <Clock className="h-8 w-8 text-yellow-600 mx-auto mt-2" />
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-red-600">{data.verificationMetrics.suspicious}</div>
+                  <div className="text-sm text-gray-600">Suspicious</div>
+                  <AlertTriangle className="h-8 w-8 text-red-600 mx-auto mt-2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-6">
@@ -363,27 +331,15 @@ export default function AnalyticsDashboard() {
               <CardTitle>Geographic Distribution</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {data.geographicDistribution.map((item, index) => (
-                  <div key={item.location} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                        {index + 1}
-                      </div>
-                      <span className="font-medium">{item.location}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-32 bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: `${(item.count / data.geographicDistribution[0].count) * 100}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-sm font-medium w-8">{item.count}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.geographicDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="location" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8b5cf6" />
+                </BarChart>
+              </ResponsiveContainer>
             </CardContent>
           </Card>
         </TabsContent>
