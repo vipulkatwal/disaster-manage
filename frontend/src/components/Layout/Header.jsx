@@ -1,16 +1,17 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Menu, 
-  Bell, 
-  Shield, 
-  Wifi, 
-  WifiOff, 
+import {
+  Menu,
+  Bell,
+  Shield,
+  Wifi,
+  WifiOff,
   User,
   AlertTriangle,
   MessageCircle,
-  Globe
+  Globe,
+  LayoutDashboard
 } from 'lucide-react';
 
 const Header = ({ user, connected, onMenuClick }) => {
@@ -42,133 +43,105 @@ const Header = ({ user, connected, onMenuClick }) => {
     <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50"
+      className="sticky top-4 z-50 h-16"
     >
-      <div className="w-full px-3 sm:px-4 lg:px-6">
-        <div className="flex justify-between items-center h-16">
-          {/* Left Section - Logo */}
-          <div className="flex items-center space-x-2 min-w-0">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={onMenuClick}
-              className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 lg:hidden flex-shrink-0"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
+      <div className="container mx-auto h-full px-4">
+        <div className="relative w-full h-full flex items-center justify-between rounded-full border border-gray-200/10 bg-gray-800/60 backdrop-blur-xl shadow-2xl shadow-black/20 px-6">
 
-            {/* Logo and Title */}
-            <Link to="/" className="flex items-center space-x-2 group min-w-0">
-              <div className="relative flex-shrink-0">
-                <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300">
-                  <Shield className="w-4 h-4 text-white" />
-                </div>
-                <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white animate-pulse"></div>
+          {/* Left Section - Logo */}
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center space-x-2 group">
+              <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 transform group-hover:scale-105">
+                <Shield className="w-5 h-5 text-white" />
               </div>
-              
-              <div className="hidden sm:block min-w-0">
-                <h1 className="text-lg font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent whitespace-nowrap">
+              <div className="hidden md:block">
+                <h1 className="text-lg font-bold text-white">
                   Emergency Response
                 </h1>
-                <p className="text-xs text-gray-500 -mt-0.5 whitespace-nowrap">Coordination Platform</p>
+                <p className="text-xs text-gray-400 -mt-1">Coordination Platform</p>
               </div>
             </Link>
           </div>
 
           {/* Center Navigation */}
-          <nav className="hidden lg:flex items-center justify-center flex-1 max-w-2xl mx-4">
-            <div className="flex items-center space-x-1 bg-gray-50 rounded-lg p-1">
-              <NavLink to="/" active={location.pathname === '/'}>
-                Dashboard
-              </NavLink>
-              <NavLink to="/disasters" active={location.pathname === '/disasters'}>
-                Disasters
-              </NavLink>
-              <NavLink to="/social-media" active={location.pathname === '/social-media'}>
-                <div className="flex items-center space-x-1.5">
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Social Media</span>
-                </div>
-              </NavLink>
-              <NavLink to="/browse" active={location.pathname === '/browse'}>
-                <div className="flex items-center space-x-1.5">
-                  <Globe className="w-3.5 h-3.5" />
-                  <span>Browse</span>
-                </div>
-              </NavLink>
-              <NavLink to="/map" active={location.pathname === '/map'}>
-                Map
-              </NavLink>
-            </div>
-          </nav>
+          <nav className="hidden lg:flex">
+              <div className="flex items-center space-x-1 bg-gray-900/50 p-1 rounded-full border border-white/10">
+                <NavLink to="/" active={location.pathname === '/'}>
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span className="ml-1.5">Dashboard</span>
+                </NavLink>
+                <NavLink to="/disasters" active={location.pathname.startsWith('/disasters')}>
+                  <Shield className="w-4 h-4" />
+                  <span className="ml-1.5">Disasters</span>
+                </NavLink>
+                <NavLink to="/social-media" active={location.pathname === '/social-media'}>
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="ml-1.5">Social Media</span>
+                </NavLink>
+                <NavLink to="/browse" active={location.pathname === '/browse'}>
+                  <Globe className="w-4 h-4" />
+                  <span className="ml-1.5">Browse</span>
+                </NavLink>
+                <NavLink to="/map" active={location.pathname === '/map'}>
+                  <div className="w-4 h-4 flex items-center justify-center">
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  </div>
+                  <span className="ml-1.5">Map</span>
+                </NavLink>
+              </div>
+            </nav>
 
           {/* Right Section */}
           <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Connection Status */}
-            <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
-              connected 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-red-100 text-red-800'
-            }`}>
-              {connected ? (
-                <>
-                  <Wifi className="w-3 h-3" />
-                  <span className="hidden sm:inline">Live</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3 h-3" />
-                  <span className="hidden sm:inline">Offline</span>
-                </>
-              )}
-            </div>
-
-            {/* Quick Action Button */}
             <Link
               to="/disasters/new"
-              className="flex items-center space-x-1.5 bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-md hover:shadow-lg"
+              className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-red-500/50"
             >
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden sm:inline">Report Emergency</span>
-              <span className="sm:hidden">Report</span>
             </Link>
 
-            {/* Notifications */}
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+            <button className="relative p-2.5 text-gray-300 hover:text-white hover:bg-white/10 rounded-full transition-all duration-200">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-gray-800"></span>
             </button>
 
-            {/* User Menu */}
             <div className="relative group">
-              <button className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200">
-                <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-white" />
+              <button className="flex items-center space-x-2">
+                <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center ring-2 ring-offset-2 ring-offset-gray-800 ring-transparent group-hover:ring-blue-400 transition-all duration-300">
+                  <User className="w-5 h-5 text-white" />
                 </div>
                 <div className="hidden xl:block text-left">
-                  <p className="text-sm font-medium text-gray-900">{user?.name || 'Coordinator'}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user?.role || 'admin'}</p>
+                  <p className="text-sm font-medium text-white">{user?.name || 'Coordinator'}</p>
+                  <p className="text-xs text-gray-400 capitalize">{user?.role || 'admin'}</p>
                 </div>
               </button>
 
               {/* User Dropdown */}
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                <div className="p-2">
-                  <div className="px-3 py-2 border-b border-gray-100">
-                    <p className="font-medium text-gray-900">{user?.name || 'Emergency Coordinator'}</p>
-                    <p className="text-sm text-gray-500">{user?.username || 'netrunnerX'}</p>
-                  </div>
-                  <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                    Profile Settings
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                    Preferences
-                  </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                    Sign Out
-                  </button>
+              <div className="absolute right-0 top-full mt-3 w-48 bg-gray-800/90 backdrop-blur-md rounded-xl shadow-lg border border-white/10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 p-2">
+                <div className="px-3 py-2 border-b border-white/10 mb-2">
+                  <p className="font-medium text-white">{user?.name || 'Emergency Coordinator'}</p>
+                  <p className="text-sm text-gray-400">{user?.username || 'netrunnerX'}</p>
                 </div>
+                <button className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-white/10 rounded-lg transition-colors">
+                  Profile Settings
+                </button>
+                <button className="w-full text-left px-3 py-2 text-sm text-gray-300 hover:bg-white/10 rounded-lg transition-colors">
+                  Preferences
+                </button>
+                <div className="h-px bg-white/10 my-1"></div>
+                <button className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 rounded-lg transition-colors">
+                  Sign Out
+                </button>
               </div>
             </div>
+
+            <button
+              onClick={onMenuClick}
+              className="p-2.5 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-all duration-200 lg:hidden flex-shrink-0"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>
@@ -184,10 +157,10 @@ const Header = ({ user, connected, onMenuClick }) => {
 const NavLink = ({ to, children, active }) => (
   <Link
     to={to}
-    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
+    className={`flex items-center px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap ${
       active
-        ? 'bg-white text-red-700 shadow-sm'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+        ? 'bg-white text-gray-900 shadow-md'
+        : 'text-gray-300 hover:bg-white hover:text-gray-900'
     }`}
   >
     {children}

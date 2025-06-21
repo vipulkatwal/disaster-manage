@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  AlertTriangle, 
-  MapPin, 
-  Clock, 
-  Users, 
+import {
+  AlertTriangle,
+  MapPin,
+  Clock,
+  Users,
   TrendingUp,
   Activity,
   Shield,
@@ -28,11 +28,12 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
   const { disasters: disasterApi, resources } = useApi();
   const [stats, setStats] = useState({
     totalDisasters: 0,
-    urgentDisasters: 0,
+    urgentEvents: 0,
     activeResources: 0,
     recentReports: 0
   });
   const [recentActivity, setRecentActivity] = useState([]);
+  const [activeAlerts, setActiveAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showSocialMedia, setShowSocialMedia] = useState(false);
@@ -45,29 +46,27 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
   const loadDashboardData = async () => {
     try {
       setRefreshing(true);
-      
-      const urgentCount = disasters.filter(d => 
-        d.tags?.includes('urgent') || d.tags?.includes('critical')
-      ).length;
-      
+
+      const urgentCount = disasters.filter(d => ['urgent', 'high'].includes(d.priority?.toLowerCase())).length;
+
       setStats({
         totalDisasters: disasters.length,
-        urgentDisasters: urgentCount,
-        activeResources: Math.floor(disasters.length * 2.5),
-        recentReports: Math.floor(disasters.length * 1.8)
+        urgentEvents: urgentCount,
+        activeResources: Math.floor(disasters.length * 2.5 + 5),
+        recentReports: Math.floor(disasters.length * 1.8 + 3)
       });
 
-      const activity = disasters.slice(0, 5).map((disaster, index) => ({
-        id: disaster.id,
-        type: ['disaster_reported', 'resource_added', 'report_submitted'][index % 3],
-        title: disaster.title,
-        location: disaster.location_name,
-        timestamp: disaster.created_at,
-        priority: disaster.tags?.includes('urgent') ? 'high' : 
-                 disaster.tags?.includes('medium') ? 'medium' : 'low'
+      const activity = disasters.slice(0, 5).map(d => ({
+        id: d.id,
+        type: d.type || 'disaster',
+        title: d.title,
+        location: d.location_name,
+        timestamp: d.created_at
       }));
-      
+
       setRecentActivity(activity);
+
+      setActiveAlerts(disasters.filter(d => d.priority?.toLowerCase() === 'urgent').slice(0, 2));
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -97,17 +96,15 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
   };
 
   const getTimeAgo = (timestamp) => {
+    if (!timestamp) return '...';
     const now = new Date();
     const created = new Date(timestamp);
     const diffMs = now - created;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
+    const diffMins = Math.round(diffMs / 60000);
     if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
+    return `${Math.floor(diffHours / 24)}d ago`;
   };
 
   const statCards = [
@@ -121,7 +118,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
     },
     {
       title: 'Urgent Events',
-      value: stats.urgentDisasters,
+      value: stats.urgentEvents,
       icon: Zap,
       color: 'from-orange-500 to-red-500',
       change: '+5%',
@@ -188,224 +185,133 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
       >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-800">
             Welcome back, {user?.name || 'Coordinator'}
           </h1>
-          <p className="text-gray-600 mt-1">
-            Here's what's happening with emergency response today
-          </p>
+          <p className="text-gray-500 mt-1">Here's what's happening with emergency response today</p>
         </div>
-        
-        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-          <button
-            onClick={loadDashboardData}
-            disabled={refreshing}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-          >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+        <div className="flex items-center space-x-2 mt-4 sm:mt-0">
+          <button className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <RefreshCw className="w-4 h-4" />
             <span>Refresh</span>
           </button>
-          
-          <Link
-            to="/disasters/new"
-            className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105"
-          >
+          <Link to="/disasters/new" className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors shadow-sm">
             <Plus className="w-4 h-4" />
             <span>Report Emergency</span>
           </Link>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {statCards.map((stat, index) => (
-          <motion.div
-            key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                <div className="flex items-center mt-2">
-                  <span className={`text-xs font-medium ${
-                    stat.changeType === 'increase' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {stat.change}
-                  </span>
-                  <span className="text-xs text-gray-500 ml-1">vs last week</span>
-                </div>
-              </div>
-              <div className={`w-12 h-12 bg-gradient-to-r ${stat.color} rounded-lg flex items-center justify-center`}>
-                <stat.icon className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        {/* Main Content Area */}
+        <div className="lg:col-span-2 xl:col-span-3 space-y-8">
+          {/* Stat Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+            <StatCard title="Total Disasters" value={stats.totalDisasters} description="+12% vs last week" icon={AlertTriangle} gradient="from-red-500 to-orange-500" />
+            <StatCard title="Urgent Events" value={stats.urgentEvents} description="+5% vs last week" icon={Zap} gradient="from-orange-400 to-yellow-400" />
+            <StatCard title="Active Resources" value={stats.activeResources} description="+8% vs last week" icon={Shield} gradient="from-green-500 to-teal-500" />
+            <StatCard title="Recent Reports" value={stats.recentReports} description="+15% vs last week" icon={FileText} gradient="from-blue-500 to-indigo-500" />
+          </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200"
-        >
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
-              <Link to="/disasters" className="text-sm text-red-600 hover:text-red-700 font-medium">
-                View all
-              </Link>
+          {/* Recent Disasters Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200/80">
+            <div className="p-4 border-b border-gray-200/80 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-800">Recent Disasters</h3>
+              <Link to="/disasters" className="text-sm font-medium text-red-600 hover:text-red-800">View all disasters</Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left text-gray-500">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3">Disaster</th>
+                    <th scope="col" className="px-6 py-3">Location</th>
+                    <th scope="col" className="px-6 py-3">Priority</th>
+                    <th scope="col" className="px-6 py-3">Time</th>
+                    <th scope="col" className="px-6 py-3"><span className="sr-only">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {disasters.slice(0, 5).map(disaster => (
+                    <tr key={disaster.id} className="bg-white border-b hover:bg-gray-50">
+                      <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center ${getPriorityPill(disaster.priority).iconBg}`}>
+                            <AlertTriangle className={`w-3 h-3 ${getPriorityPill(disaster.priority).iconColor}`} />
+                          </div>
+                          <div>
+                            <div>{disaster.title}</div>
+                            <div className="text-xs text-gray-400 font-normal truncate max-w-xs">{disaster.description}</div>
+                          </div>
+                        </div>
+                      </th>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                           <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                           <span>{disaster.location_name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getPriorityPill(disaster.priority).pill}`}>
+                          {disaster.priority}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">{getTimeAgo(disaster.created_at)}</td>
+                      <td className="px-6 py-4 text-right">
+                        <Link to={`/disasters/${disaster.id}`} className="font-medium text-red-600 hover:underline">Add Report</Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-          
-          <div className="p-6">
-            {recentActivity.length > 0 ? (
-              <div className="space-y-4">
-                {recentActivity.map((activity, index) => (
-                  <motion.div
-                    key={activity.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + index * 0.1 }}
-                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => onDisasterSelect(disasters.find(d => d.id === activity.id))}
-                  >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${getActivityColor(activity.type, activity.priority)}`}>
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {activity.title}
-                      </p>
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
-                        {activity.location && (
-                          <>
-                            <MapPin className="w-3 h-3 mr-1" />
-                            <span className="truncate mr-2">{activity.location}</span>
-                          </>
-                        )}
-                        <Clock className="w-3 h-3 mr-1" />
-                        <span>{getTimeAgo(activity.timestamp)}</span>
-                      </div>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-gray-400" />
-                  </motion.div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Activity className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No recent activity</p>
-              </div>
-            )}
-          </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="space-y-6"
-        >
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
-            </div>
-            <div className="p-6 space-y-3">
+        {/* Right Sidebar */}
+        <div className="space-y-8">
+          {/* Quick Actions */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 p-5">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+            <div className="space-y-3">
               {quickActions.map((action, index) => (
-                <motion.div
-                  key={action.title}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 + index * 0.1 }}
-                >
-                  <Link
-                    to={action.link}
-                    className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className={`w-10 h-10 bg-gradient-to-r ${action.color} rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                      <action.icon className="w-5 h-5 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{action.title}</p>
-                      <p className="text-xs text-gray-500">{action.description}</p>
-                    </div>
-                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-gray-600" />
-                  </Link>
-                </motion.div>
+                <QuickAction key={action.title} title={action.title} description={action.description} icon={action.icon} link={action.link} />
               ))}
             </div>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">System Status</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">API Services</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-600">Operational</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Real-time Updates</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-600">Active</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">External APIs</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <span className="text-sm text-yellow-600">Degraded</span>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">Database</span>
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-green-600">Healthy</span>
-                </div>
-              </div>
+          {/* System Status */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 p-5">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">System Status</h3>
+            <div className="space-y-3 text-sm">
+                <SystemStatusItem label="API Services" status="Operational" />
+                <SystemStatusItem label="Real-time Updates" status="Active" />
+                <SystemStatusItem label="External APIs" status="Degraded" />
+                <SystemStatusItem label="Database" status="Healthy" />
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-xl shadow-sm text-white">
-            <div className="p-6">
-              <div className="flex items-center space-x-3 mb-3">
-                <Bell className="w-5 h-5" />
-                <h3 className="font-semibold">Active Alerts</h3>
+          {/* Active Alerts */}
+          {activeAlerts.length > 0 && (
+            <div className="bg-gradient-to-br from-red-500 to-orange-500 rounded-xl shadow-lg p-5 text-white">
+              <div className="flex items-center space-x-3">
+                <Bell className="w-6 h-6" />
+                <h3 className="text-lg font-semibold">Active Alerts</h3>
               </div>
-              <p className="text-sm opacity-90 mb-4">
-                {stats.urgentDisasters} urgent disasters require immediate attention
-              </p>
-              <Link
-                to="/disasters?filter=urgent"
-                className="inline-flex items-center space-x-2 bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              >
-                <span>View Urgent</span>
-                <ExternalLink className="w-4 h-4" />
+              <p className="mt-2 text-sm text-red-100">{activeAlerts.length} urgent disasters require immediate attention</p>
+              <Link to="/disasters?priority=urgent" className="mt-4 inline-block w-full text-center bg-white/90 text-red-600 font-semibold px-4 py-2 rounded-lg text-sm hover:bg-white transition-colors">
+                View Urgent
               </Link>
             </div>
-          </div>
-        </motion.div>
+          )}
+        </div>
       </div>
 
       {selectedDisaster && (
@@ -426,9 +332,9 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   <span>{showSocialMedia ? 'Hide' : 'Show'}</span>
                 </button>
               </div>
-              
+
               {showSocialMedia ? (
-                <SocialMediaFeed 
+                <SocialMediaFeed
                   disasterId={selectedDisaster.id}
                   keywords={selectedDisaster.tags?.join(',')}
                 />
@@ -457,9 +363,9 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   <span>{showOfficialUpdates ? 'Hide' : 'Show'}</span>
                 </button>
               </div>
-              
+
               {showOfficialUpdates ? (
-                <OfficialUpdates 
+                <OfficialUpdates
                   disasterId={selectedDisaster.id}
                 />
               ) : (
@@ -472,106 +378,68 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
           </motion.div>
         </div>
       )}
-
-      {disasters.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200"
-        >
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Disasters</h2>
-              <Link to="/disasters" className="text-sm text-red-600 hover:text-red-700 font-medium">
-                View all disasters
-              </Link>
-            </div>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Disaster
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Priority
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {disasters.slice(0, 5).map((disaster, index) => (
-                  <motion.tr
-                    key={disaster.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 + index * 0.1 }}
-                    className="hover:bg-gray-50 cursor-pointer"
-                    onClick={() => onDisasterSelect(disaster)}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0">
-                          <AlertTriangle className={`w-5 h-5 ${
-                            disaster.tags?.includes('urgent') ? 'text-red-500' : 'text-yellow-500'
-                          }`} />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{disaster.title}</p>
-                          <p className="text-sm text-gray-500 truncate max-w-xs">{disaster.description}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-500">
-                        <MapPin className="w-4 h-4 mr-1" />
-                        {disaster.location_name || 'Unknown'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        disaster.tags?.includes('urgent') 
-                          ? 'bg-red-100 text-red-800'
-                          : disaster.tags?.includes('high')
-                          ? 'bg-orange-100 text-orange-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {disaster.tags?.includes('urgent') ? 'Urgent' : 
-                         disaster.tags?.includes('high') ? 'High' : 'Medium'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {getTimeAgo(disaster.created_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        to={`/disasters/${disaster.id}/report`}
-                        className="text-red-600 hover:text-red-900 text-sm font-medium"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Add Report
-                      </Link>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </motion.div>
-      )}
     </div>
   );
+};
+
+// Sub-components for a cleaner structure
+const StatCard = ({ title, value, description, icon: Icon, gradient }) => (
+  <div className={`bg-gradient-to-br p-5 rounded-xl text-white shadow-lg ${gradient}`}>
+    <div className="flex justify-between items-start">
+      <div>
+        <p className="font-semibold text-white/90">{title}</p>
+        <p className="text-4xl font-bold mt-2">{value}</p>
+      </div>
+      <div className="p-2 bg-black/20 rounded-lg">
+        <Icon className="w-6 h-6" />
+      </div>
+    </div>
+    <p className="text-sm opacity-80 mt-2">{description}</p>
+  </div>
+);
+
+const QuickAction = ({ title, description, icon: Icon, link }) => (
+  <Link to={link} className="flex items-center space-x-4 p-3 -m-3 rounded-lg hover:bg-gray-100 transition-colors group">
+    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+      <Icon className="w-5 h-5 text-gray-600" />
+    </div>
+    <div>
+      <p className="font-semibold text-gray-800">{title}</p>
+      <p className="text-xs text-gray-500">{description}</p>
+    </div>
+    <ExternalLink className="w-4 h-4 text-gray-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+  </Link>
+);
+
+const SystemStatusItem = ({ label, status }) => {
+    const statusStyles = {
+        'Operational': 'bg-green-500',
+        'Active': 'bg-green-500 animate-pulse',
+        'Degraded': 'bg-yellow-500',
+        'Healthy': 'bg-green-500',
+    };
+    return (
+        <div className="flex justify-between items-center">
+            <span>{label}</span>
+            <div className="flex items-center space-x-2">
+                <div className={`w-2.5 h-2.5 rounded-full ${statusStyles[status] || 'bg-gray-500'}`}></div>
+                <span className="font-medium text-gray-700">{status}</span>
+            </div>
+        </div>
+    );
+};
+
+const getPriorityPill = (priority) => {
+    switch (priority?.toLowerCase()) {
+        case 'urgent':
+            return { pill: 'bg-red-100 text-red-700', iconBg: 'bg-red-100', iconColor: 'text-red-600'};
+        case 'high':
+            return { pill: 'bg-orange-100 text-orange-700', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' };
+        case 'medium':
+            return { pill: 'bg-yellow-100 text-yellow-800', iconBg: 'bg-yellow-100', iconColor: 'text-yellow-700' };
+        default:
+            return { pill: 'bg-blue-100 text-blue-700', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' };
+    }
 };
 
 export default Dashboard;
