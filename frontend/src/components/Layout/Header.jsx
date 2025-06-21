@@ -56,7 +56,7 @@ const Header = ({ user, connected, onMenuClick }) => {
               </div>
               <div className="hidden md:block">
                 <h1 className="text-lg font-bold text-white">
-                  Emergency Response
+                  Geo Aid
                 </h1>
                 <p className="text-xs text-gray-400 -mt-1">Coordination Platform</p>
               </div>

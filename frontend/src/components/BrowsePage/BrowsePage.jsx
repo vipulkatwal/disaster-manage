@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Globe, 
-  RefreshCw, 
-  Filter, 
+import {
+  Globe,
+  RefreshCw,
+  Filter,
   Search,
   ExternalLink,
   FileText,
@@ -52,7 +52,7 @@ const BrowsePage = () => {
         sources: filterSource !== 'all' ? filterSource : undefined,
         limit: 100
       });
-      
+
       if (response.success && response.data.results) {
         setUpdates(response.data.results);
         calculateStats(response.data.results);
@@ -86,7 +86,7 @@ const BrowsePage = () => {
         sources: filterSource !== 'all' ? filterSource : undefined,
         limit: 100
       });
-      
+
       if (response.success && response.data.updates) {
         setUpdates(response.data.updates);
         calculateStats(response.data.updates);
@@ -112,14 +112,14 @@ const BrowsePage = () => {
   };
 
   const filteredUpdates = updates.filter(update => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       update.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       update.source.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesSeverity = filterSeverity === 'all' || update.severity === filterSeverity;
     const matchesCategory = filterCategory === 'all' || update.category === filterCategory;
-    
+
     return matchesSearch && matchesSeverity && matchesCategory;
   });
 
@@ -205,7 +205,7 @@ const BrowsePage = () => {
             Real-time updates from government agencies and relief organizations
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <button
             onClick={loadOfficialUpdates}
@@ -247,8 +247,8 @@ const BrowsePage = () => {
               key={category.key}
               onClick={() => loadCategoryUpdates(category.key)}
               className={`p-4 rounded-lg border-2 border-dashed transition-all hover:border-solid hover:shadow-md ${
-                filterCategory === category.key 
-                  ? `border-${category.color}-500 bg-${category.color}-50` 
+                filterCategory === category.key
+                  ? `border-${category.color}-500 bg-${category.color}-50`
                   : 'border-gray-300 hover:border-gray-400'
               }`}
             >
@@ -271,7 +271,7 @@ const BrowsePage = () => {
               />
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <Filter className="w-4 h-4 text-gray-500" />
             <select
@@ -286,7 +286,7 @@ const BrowsePage = () => {
                 </option>
               ))}
             </select>
-            
+
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
@@ -366,7 +366,7 @@ const BrowsePage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <span className={`px-3 py-1 text-xs font-bold rounded-full border ${getSeverityColor(update.severity)}`}>
                         {update.severity.toUpperCase()} PRIORITY
@@ -421,7 +421,7 @@ const BrowsePage = () => {
               <h3 className="text-lg font-medium text-gray-900 mb-2">No official updates found</h3>
               <p className="text-gray-500 mb-6">
                 {searchQuery || filterSource !== 'all' || filterCategory !== 'all'
-                  ? 'Try adjusting your search or filter criteria' 
+                  ? 'Try adjusting your search or filter criteria'
                   : 'Official updates from government agencies will appear here'
                 }
               </p>
@@ -464,8 +464,8 @@ const BrowsePage = () => {
                   <p className="text-sm text-gray-600 mb-3">{source.description}</p>
                   <div className="flex items-center justify-between">
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      source.active 
-                        ? 'bg-green-100 text-green-800' 
+                      source.active
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-600'
                     }`}>
                       {source.active ? 'Active' : 'Inactive'}
