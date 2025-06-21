@@ -1,5 +1,6 @@
 // Step 12: Socket.IO Client Integration
 import { io, type Socket } from "socket.io-client"
+import { Server } from "socket.io"
 
 class SocketManager {
   private socket: Socket | null = null
@@ -58,7 +59,7 @@ class SocketManager {
     }
   }
 
-  private emit(event: string, data: any) {
+  emit(event: string, data: any) {
     const eventListeners = this.listeners.get(event)
     if (eventListeners) {
       eventListeners.forEach((callback) => callback(data))
@@ -78,7 +79,35 @@ class SocketManager {
   }
 }
 
+// Server-side socket manager
+class ServerSocketManager {
+  private io: Server | null = null
+
+  setIO(io: Server) {
+    this.io = io
+  }
+
+  emit(event: string, data: any) {
+    if (this.io) {
+      this.io.emit(event, data)
+    }
+  }
+
+  emitToUser(userId: string, event: string, data: any) {
+    if (this.io) {
+      this.io.to(`user:${userId}`).emit(event, data)
+    }
+  }
+
+  emitToRoom(room: string, event: string, data: any) {
+    if (this.io) {
+      this.io.to(room).emit(event, data)
+    }
+  }
+}
+
 export const socketManager = new SocketManager()
+export const serverSocketManager = new ServerSocketManager()
 
 // Auto-connect when imported
 if (typeof window !== "undefined") {

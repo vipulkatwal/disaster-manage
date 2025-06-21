@@ -11,6 +11,8 @@ import { getCurrentUser, logAuditTrail } from "./services/auth"
 import { convertLocationToLatLng } from "./services/geocoding"
 import { extractLocationFromText, classifyUrgency, verifyImageAuthenticity } from "./services/gemini"
 import { getFromCache, setCache, clearExpiredCache } from "./services/cache"
+import { alertingService } from "./services/alerting"
+import { serverSocketManager } from "./services/socket"
 import officialUpdatesRouter from "./routes/official-updates"
 import verifyImageRouter from "./routes/verify-image"
 
@@ -22,6 +24,9 @@ const io = new Server(server, {
     methods: ["GET", "POST", "PUT", "DELETE"],
   },
 })
+
+// Set up server socket manager
+serverSocketManager.setIO(io)
 
 // Middleware
 app.use(cors())
@@ -776,6 +781,55 @@ setInterval(async () => {
     console.error("Social media monitoring error:", error)
   }
 }, 300000)
+
+// ===== ALERT ENDPOINTS =====
+app.get("/api/alerts", async (req, res) => {
+  try {
+    const { resolved, priority } = req.query
+    let query = supabase.from("alerts").select("*").order("created_at", { ascending: false })
+
+    if (resolved !== undefined) {
+      query = query.eq("resolved", resolved === "true")
+    }
+    if (priority) {
+      query = query.eq("priority", priority)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    res.json(data)
+  } catch (error) {
+    console.error("Get alerts error:", error)
+    res.status(500).json({ error: "Failed to fetch alerts" })
+  }
+})
+
+app.post("/api/alerts/:id/acknowledge", async (req, res) => {
+  try {
+    const user = getCurrentUser()
+    const { id } = req.params
+
+    await alertingService.acknowledgeAlert(id, user.id)
+    res.json({ success: true })
+  } catch (error) {
+    console.error("Acknowledge alert error:", error)
+    res.status(500).json({ error: "Failed to acknowledge alert" })
+  }
+})
+
+app.post("/api/alerts/:id/resolve", async (req, res) => {
+  try {
+    const user = getCurrentUser()
+    const { id } = req.params
+
+    await alertingService.resolveAlert(id, user.id)
+    res.json({ success: true })
+  } catch (error) {
+    console.error("Resolve alert error:", error)
+    res.status(500).json({ error: "Failed to resolve alert" })
+  }
+})
 
 const PORT = process.env.PORT || 3001
 server.listen(PORT, () => {

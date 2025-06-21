@@ -1,271 +1,225 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { X, Bell, AlertTriangle, CheckCircle, Info, Settings } from "lucide-react"
-import { socketManager } from "@/lib/socket"
+import React, { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
+import { Button } from "./ui/button"
+import { Badge } from "./ui/badge"
+import { Bell, AlertTriangle, CheckCircle, X, Clock } from "lucide-react"
+import { socketManager } from "../lib/socket"
 
-interface Notification {
+interface Alert {
   id: string
-  type: "disaster" | "resource" | "social" | "system" | "alert"
+  type: "social_media" | "disaster" | "resource" | "system"
+  priority: "low" | "medium" | "high" | "critical"
   title: string
   message: string
-  priority: "low" | "medium" | "high" | "critical"
-  timestamp: string
-  read: boolean
-  actionUrl?: string
-  data?: any
+  source: string
+  location?: {
+    lat: number
+    lng: number
+    name: string
+  }
+  metadata?: any
+  created_at: string
+  acknowledged_by?: string[]
+  resolved: boolean
 }
 
 export default function NotificationSystem() {
-  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [alerts, setAlerts] = useState<Alert[]>([])
   const [showNotifications, setShowNotifications] = useState(false)
-  const [settings, setSettings] = useState({
-    disasters: true,
-    resources: true,
-    social: false,
-    system: false,
-    criticalOnly: false,
-  })
+  const [unreadCount, setUnreadCount] = useState(0)
 
   useEffect(() => {
-    // Request notification permission
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission()
-    }
-
-    // Load existing notifications
-    loadNotifications()
-
-    // Set up real-time notification listeners
-    const handleDisasterUpdate = (data: any) => {
-      if (settings.disasters && (!settings.criticalOnly || data.priority === "critical")) {
-        addNotification({
-          type: "disaster",
-          title: "Disaster Updated",
-          message: `${data.title} has been updated`,
-          priority: data.priority,
-          data,
-        })
-      }
-    }
-
-    const handleResourceUpdate = (data: any) => {
-      if (settings.resources) {
-        addNotification({
-          type: "resource",
-          title: "Resource Updated",
-          message: `${data.name} status changed to ${data.status}`,
-          priority: "medium",
-          data,
-        })
-      }
-    }
-
-    const handleSocialUpdate = (data: any) => {
-      if (settings.social && data.urgency === "critical") {
-        addNotification({
-          type: "social",
-          title: "Urgent Social Media Alert",
-          message: `High-priority post detected: ${data.content.slice(0, 50)}...`,
-          priority: "high",
-          data,
-        })
-      }
-    }
-
-    socketManager.on("disaster_updated", handleDisasterUpdate)
-    socketManager.on("resources_updated", handleResourceUpdate)
-    socketManager.on("social_media_updated", handleSocialUpdate)
+    loadAlerts()
+    setupSocketListeners()
 
     return () => {
-      socketManager.off("disaster_updated", handleDisasterUpdate)
-      socketManager.off("resources_updated", handleResourceUpdate)
-      socketManager.off("social_media_updated", handleSocialUpdate)
+      socketManager.off("priority_alert", handleNewAlert)
+      socketManager.off("alert_escalated", handleAlertEscalated)
+      socketManager.off("alert_resolved", handleAlertResolved)
     }
-  }, [settings])
+  }, [])
 
-  const loadNotifications = () => {
-    // Load from localStorage or API
-    const stored = localStorage.getItem("disaster_notifications")
-    if (stored) {
-      setNotifications(JSON.parse(stored))
+  const loadAlerts = async () => {
+    try {
+      const response = await fetch("/api/alerts?resolved=false")
+      const data = await response.json()
+      setAlerts(data)
+      setUnreadCount(data.filter((alert: Alert) => !alert.acknowledged_by?.length).length)
+    } catch (error) {
+      console.error("Failed to load alerts:", error)
     }
   }
 
-  const addNotification = (notificationData: Omit<Notification, "id" | "timestamp" | "read">) => {
-    const notification: Notification = {
-      ...notificationData,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString(),
-      read: false,
-    }
+  const setupSocketListeners = () => {
+    socketManager.on("priority_alert", handleNewAlert)
+    socketManager.on("alert_escalated", handleAlertEscalated)
+    socketManager.on("alert_resolved", handleAlertResolved)
+  }
 
-    setNotifications((prev) => [notification, ...prev.slice(0, 49)]) // Keep 50 most recent
+  const handleNewAlert = (alert: Alert) => {
+    setAlerts(prev => [alert, ...prev])
+    setUnreadCount(prev => prev + 1)
 
     // Show browser notification for critical alerts
-    if (notification.priority === "critical" && "Notification" in window && Notification.permission === "granted") {
-      new Notification(notification.title, {
-        body: notification.message,
-        icon: "/disaster-icon.png",
-        tag: notification.id,
+    if (alert.priority === "critical" && "Notification" in window) {
+      new Notification("🚨 Critical Alert", {
+        body: alert.title,
+        icon: "/placeholder-logo.png"
       })
     }
-
-    // Save to localStorage
-    setTimeout(() => {
-      const current = JSON.parse(localStorage.getItem("disaster_notifications") || "[]")
-      localStorage.setItem("disaster_notifications", JSON.stringify([notification, ...current.slice(0, 49)]))
-    }, 100)
   }
 
-  const markAsRead = (id: string) => {
-    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+  const handleAlertEscalated = (data: { alertId: string; escalatedAlert: Alert }) => {
+    setAlerts(prev => prev.map(alert =>
+      alert.id === data.alertId ? data.escalatedAlert : alert
+    ))
   }
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+  const handleAlertResolved = (data: { alertId: string; resolvedBy: string }) => {
+    setAlerts(prev => prev.filter(alert => alert.id !== data.alertId))
+    setUnreadCount(prev => Math.max(0, prev - 1))
   }
 
-  const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id))
+  const acknowledgeAlert = async (alertId: string) => {
+    try {
+      await fetch(`/api/alerts/${alertId}/acknowledge`, { method: "POST" })
+      setAlerts(prev => prev.map(alert =>
+        alert.id === alertId
+          ? { ...alert, acknowledged_by: [...(alert.acknowledged_by || []), "current_user"] }
+          : alert
+      ))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (error) {
+      console.error("Failed to acknowledge alert:", error)
+    }
   }
 
-  const clearAll = () => {
-    setNotifications([])
-    localStorage.removeItem("disaster_notifications")
-  }
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "disaster":
-        return <AlertTriangle className="h-4 w-4 text-red-600" />
-      case "resource":
-        return <CheckCircle className="h-4 w-4 text-green-600" />
-      case "social":
-        return <Info className="h-4 w-4 text-blue-600" />
-      case "system":
-        return <Settings className="h-4 w-4 text-gray-600" />
-      default:
-        return <Bell className="h-4 w-4 text-gray-600" />
+  const resolveAlert = async (alertId: string) => {
+    try {
+      await fetch(`/api/alerts/${alertId}/resolve`, { method: "POST" })
+      setAlerts(prev => prev.filter(alert => alert.id !== alertId))
+      setUnreadCount(prev => Math.max(0, prev - 1))
+    } catch (error) {
+      console.error("Failed to resolve alert:", error)
     }
   }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "critical":
-        return "bg-red-600 text-white"
-      case "high":
-        return "bg-orange-600 text-white"
-      case "medium":
-        return "bg-yellow-600 text-white"
-      case "low":
-        return "bg-green-600 text-white"
-      default:
-        return "bg-gray-600 text-white"
+      case "critical": return "bg-red-600 text-white"
+      case "high": return "bg-orange-600 text-white"
+      case "medium": return "bg-yellow-600 text-white"
+      case "low": return "bg-blue-600 text-white"
+      default: return "bg-gray-600 text-white"
     }
   }
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case "social_media": return <Bell className="h-4 w-4" />
+      case "disaster": return <AlertTriangle className="h-4 w-4" />
+      case "resource": return <CheckCircle className="h-4 w-4" />
+      case "system": return <Clock className="h-4 w-4" />
+      default: return <Bell className="h-4 w-4" />
+    }
+  }
 
   return (
     <div className="relative">
-      {/* Notification Bell */}
-      <Button variant="outline" size="sm" onClick={() => setShowNotifications(!showNotifications)} className="relative">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setShowNotifications(!showNotifications)}
+        className="relative"
+      >
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
-          <Badge className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center bg-red-600 text-white text-xs">
-            {unreadCount > 99 ? "99+" : unreadCount}
+          <Badge
+            variant="destructive"
+            className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs"
+          >
+            {unreadCount > 9 ? "9+" : unreadCount}
           </Badge>
         )}
       </Button>
 
-      {/* Notification Panel */}
       {showNotifications && (
-        <div className="absolute right-0 top-12 w-96 max-h-96 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Notifications</h3>
-              <div className="flex gap-2">
-                {unreadCount > 0 && (
-                  <Button variant="ghost" size="sm" onClick={markAllAsRead}>
-                    Mark all read
-                  </Button>
-                )}
-                <Button variant="ghost" size="sm" onClick={clearAll}>
-                  Clear all
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setShowNotifications(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Bell className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>No notifications</p>
-              </div>
+        <Card className="absolute right-0 top-12 w-96 z-50 max-h-96 overflow-y-auto">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center justify-between">
+              Priority Alerts
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowNotifications(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {alerts.length === 0 ? (
+              <p className="text-center text-gray-500 py-4">No active alerts</p>
             ) : (
-              <div className="space-y-1">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                      !notification.read ? "bg-blue-50" : ""
-                    }`}
-                    onClick={() => markAsRead(notification.id)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 mt-0.5">{getIcon(notification.type)}</div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">{notification.title}</p>
-                          <Badge className={`${getPriorityColor(notification.priority)} text-xs`}>
-                            {notification.priority}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">{notification.message}</p>
-                        <p className="text-xs text-gray-500">{new Date(notification.timestamp).toLocaleString()}</p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteNotification(notification.id)
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Settings */}
-          <div className="p-3 border-t border-gray-200 bg-gray-50">
-            <div className="text-xs text-gray-600 mb-2">Notification Settings:</div>
-            <div className="flex flex-wrap gap-1">
-              {Object.entries(settings).map(([key, enabled]) => (
-                <Button
-                  key={key}
-                  variant={enabled ? "default" : "outline"}
-                  size="sm"
-                  className="text-xs h-6"
-                  onClick={() => setSettings((prev) => ({ ...prev, [key]: !enabled }))}
+              alerts.map((alert) => (
+                <div
+                  key={alert.id}
+                  className={`p-3 rounded-lg border ${
+                    alert.priority === "critical"
+                      ? "border-red-200 bg-red-50"
+                      : alert.priority === "high"
+                      ? "border-orange-200 bg-orange-50"
+                      : "border-gray-200 bg-gray-50"
+                  }`}
                 >
-                  {key}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </div>
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      {getTypeIcon(alert.type)}
+                      <Badge className={getPriorityColor(alert.priority)}>
+                        {alert.priority}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(alert.created_at).toLocaleTimeString()}
+                    </span>
+                  </div>
+
+                  <h4 className="font-semibold text-sm mb-1">{alert.title}</h4>
+                  <p className="text-sm text-gray-600 mb-2">{alert.message}</p>
+
+                  {alert.source && (
+                    <p className="text-xs text-gray-500 mb-2">Source: {alert.source}</p>
+                  )}
+
+                  {alert.location?.name && (
+                    <p className="text-xs text-gray-500 mb-2">Location: {alert.location.name}</p>
+                  )}
+
+                  <div className="flex gap-2">
+                    {!alert.acknowledged_by?.length && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => acknowledgeAlert(alert.id)}
+                      >
+                        Acknowledge
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => resolveAlert(alert.id)}
+                    >
+                      Resolve
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   )

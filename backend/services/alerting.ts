@@ -1,205 +1,245 @@
-// Emergency alerting service
-import { io } from "../index"
+// Priority Alert System for Disaster Response
 import { supabase } from "./supabase"
+import { serverSocketManager } from "./socket"
+import { classifyUrgency } from "./gemini"
 
 export interface Alert {
   id: string
-  type: "disaster" | "resource" | "system" | "weather"
-  severity: "info" | "warning" | "critical" | "emergency"
+  type: "social_media" | "disaster" | "resource" | "system"
+  priority: "low" | "medium" | "high" | "critical"
   title: string
   message: string
+  source: string
   location?: {
     lat: number
     lng: number
-    radius: number
     name: string
   }
-  expires_at?: string
+  metadata?: any
   created_at: string
+  acknowledged_by?: string[]
+  resolved: boolean
+}
+
+export interface AlertRule {
+  id: string
+  name: string
+  conditions: {
+    keywords: string[]
+    urgency_threshold: "low" | "medium" | "high" | "critical"
+    platforms?: string[]
+    location_radius?: number
+  }
+  actions: {
+    notify_users: string[]
+    create_alert: boolean
+    auto_escalate: boolean
+  }
+  enabled: boolean
 }
 
 class AlertingService {
-  private activeAlerts: Map<string, Alert> = new Map()
+  private alertRules: AlertRule[] = [
+    {
+      id: "urgent_sos",
+      name: "SOS/Urgent Help Detection",
+      conditions: {
+        keywords: ["SOS", "urgent", "help", "emergency", "critical", "immediate", "trapped", "injured"],
+        urgency_threshold: "high",
+        platforms: ["twitter", "bluesky", "facebook"],
+      },
+      actions: {
+        notify_users: ["reliefAdmin", "netrunnerX"],
+        create_alert: true,
+        auto_escalate: true,
+      },
+      enabled: true,
+    },
+    {
+      id: "medical_emergency",
+      name: "Medical Emergency Detection",
+      conditions: {
+        keywords: ["medical", "hospital", "ambulance", "doctor", "injury", "bleeding", "unconscious"],
+        urgency_threshold: "high",
+      },
+      actions: {
+        notify_users: ["reliefAdmin"],
+        create_alert: true,
+        auto_escalate: true,
+      },
+      enabled: true,
+    },
+    {
+      id: "evacuation_alert",
+      name: "Evacuation Alert Detection",
+      conditions: {
+        keywords: ["evacuate", "evacuation", "leave", "danger", "unsafe", "collapse"],
+        urgency_threshold: "medium",
+      },
+      actions: {
+        notify_users: ["reliefAdmin", "netrunnerX"],
+        create_alert: true,
+        auto_escalate: false,
+      },
+      enabled: true,
+    },
+  ]
 
-  async createAlert(alertData: Omit<Alert, "id" | "created_at">): Promise<Alert> {
-    const alert: Alert = {
-      ...alertData,
-      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      created_at: new Date().toISOString(),
+  async processSocialMediaPost(post: any): Promise<Alert | null> {
+    // Check if post matches any alert rules
+    for (const rule of this.alertRules) {
+      if (!rule.enabled) continue
+
+      const matches = this.checkRuleConditions(post, rule.conditions)
+      if (matches) {
+        const alert = await this.createAlert({
+          type: "social_media",
+          priority: rule.conditions.urgency_threshold,
+          title: `Priority Alert: ${rule.name}`,
+          message: `Urgent social media post detected: "${post.content.substring(0, 100)}..."`,
+          source: post.platform,
+          location: post.location,
+          metadata: {
+            post_id: post.id,
+            author: post.author,
+            engagement: post.engagement,
+            rule_id: rule.id,
+          },
+        })
+
+        // Execute rule actions
+        await this.executeRuleActions(alert, rule.actions)
+        return alert
+      }
     }
 
-    this.activeAlerts.set(alert.id, alert)
-
-    // Store in database
-    await supabase.from("alerts").insert({
-      id: alert.id,
-      type: alert.type,
-      severity: alert.severity,
-      title: alert.title,
-      message: alert.message,
-      location: alert.location ? `POINT(${alert.location.lng} ${alert.location.lat})` : null,
-      location_name: alert.location?.name,
-      radius: alert.location?.radius,
-      expires_at: alert.expires_at,
-      created_at: alert.created_at,
-    })
-
-    // Broadcast alert
-    this.broadcastAlert(alert)
-
-    return alert
+    return null
   }
 
-  private broadcastAlert(alert: Alert) {
-    // Global broadcast for critical/emergency alerts
-    if (["critical", "emergency"].includes(alert.severity)) {
-      io.emit("emergency_alert", alert)
+  private checkRuleConditions(post: any, conditions: AlertRule["conditions"]): boolean {
+    // Check keywords
+    const postText = post.content.toLowerCase()
+    const hasKeywords = conditions.keywords.some(keyword =>
+      postText.includes(keyword.toLowerCase())
+    )
+    if (!hasKeywords) return false
+
+    // Check urgency threshold
+    const urgencyLevels = { low: 1, medium: 2, high: 3, critical: 4 }
+    const postUrgency = urgencyLevels[post.urgency] || 1
+    const threshold = urgencyLevels[conditions.urgency_threshold]
+    if (postUrgency < threshold) return false
+
+    // Check platform
+    if (conditions.platforms && !conditions.platforms.includes(post.platform)) {
+      return false
     }
-
-    // Location-based broadcast
-    if (alert.location) {
-      this.broadcastToLocation(alert, alert.location)
-    }
-
-    // Type-based broadcast
-    io.emit(`${alert.type}_alert`, alert)
-
-    console.log(`🚨 Alert broadcasted: ${alert.severity.toUpperCase()} - ${alert.title}`)
-  }
-
-  private broadcastToLocation(alert: Alert, location: { lat: number; lng: number; radius: number }) {
-    // This would integrate with the socket connection manager
-    // to send alerts to clients within the specified radius
-    io.emit("location_alert", {
-      alert,
-      location,
-    })
-  }
-
-  async dismissAlert(alertId: string): Promise<boolean> {
-    const alert = this.activeAlerts.get(alertId)
-    if (!alert) return false
-
-    this.activeAlerts.delete(alertId)
-
-    // Update database
-    await supabase.from("alerts").update({ dismissed_at: new Date().toISOString() }).eq("id", alertId)
-
-    // Broadcast dismissal
-    io.emit("alert_dismissed", { alertId })
 
     return true
   }
 
-  async getActiveAlerts(location?: { lat: number; lng: number; radius: number }): Promise<Alert[]> {
-    let query = supabase
-      .from("alerts")
-      .select("*")
-      .is("dismissed_at", null)
-      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
-      .order("created_at", { ascending: false })
-
-    if (location) {
-      // Add spatial query for location-based alerts
-      query = query.or(
-        `location.is.null,location.st_dwithin(st_geogfromtext('POINT(${location.lng} ${location.lat})'),${location.radius})`,
-      )
+  async createAlert(alertData: Omit<Alert, "id" | "created_at" | "acknowledged_by" | "resolved">): Promise<Alert> {
+    const alert: Alert = {
+      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      ...alertData,
+      created_at: new Date().toISOString(),
+      acknowledged_by: [],
+      resolved: false,
     }
 
-    const { data, error } = await query
+    // Store in database
+    await supabase.from("alerts").insert(alert)
+
+    // Broadcast real-time alert
+    serverSocketManager.emit("priority_alert", alert)
+
+    // Log the alert
+    console.log(`🚨 Priority Alert Created: ${alert.title} (${alert.priority})`)
+
+    return alert
+  }
+
+  private async executeRuleActions(alert: Alert, actions: AlertRule["actions"]) {
+    // Notify users
+    for (const userId of actions.notify_users) {
+      await this.notifyUser(userId, alert)
+    }
+
+    // Auto-escalate if needed
+    if (actions.auto_escalate && alert.priority !== "critical") {
+      await this.escalateAlert(alert)
+    }
+  }
+
+  private async notifyUser(userId: string, alert: Alert) {
+    // Send notification to specific user
+    serverSocketManager.emit(`user:${userId}:alert`, alert)
+
+    // In a real implementation, you might also send:
+    // - Email notifications
+    // - SMS alerts
+    // - Push notifications
+    // - Slack/Discord webhooks
+  }
+
+  private async escalateAlert(alert: Alert) {
+    // Escalate alert priority
+    const escalatedAlert = {
+      ...alert,
+      priority: "critical" as const,
+      title: `ESCALATED: ${alert.title}`,
+    }
+
+    await supabase.from("alerts").update(escalatedAlert).eq("id", alert.id)
+    serverSocketManager.emit("alert_escalated", escalatedAlert)
+  }
+
+  async getActiveAlerts(): Promise<Alert[]> {
+    const { data, error } = await supabase
+      .from("alerts")
+      .select("*")
+      .eq("resolved", false)
+      .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Failed to fetch alerts:", error)
+      console.error("Error fetching alerts:", error)
       return []
     }
 
-    return (data || []).map((row) => ({
-      id: row.id,
-      type: row.type,
-      severity: row.severity,
-      title: row.title,
-      message: row.message,
-      location: row.location
-        ? {
-            lat: row.location.coordinates[1],
-            lng: row.location.coordinates[0],
-            radius: row.radius || 10000,
-            name: row.location_name || "Unknown",
-          }
-        : undefined,
-      expires_at: row.expires_at,
-      created_at: row.created_at,
-    }))
+    return data || []
   }
 
-  // Automated alert triggers
-  async checkDisasterAlerts() {
-    try {
-      // Check for new critical disasters
-      const { data: criticalDisasters } = await supabase
-        .from("disasters")
-        .select("*")
-        .eq("priority", "critical")
-        .eq("status", "active")
-        .gte("created_at", new Date(Date.now() - 300000).toISOString()) // Last 5 minutes
+  async acknowledgeAlert(alertId: string, userId: string): Promise<void> {
+    const { data: alert } = await supabase
+      .from("alerts")
+      .select("acknowledged_by")
+      .eq("id", alertId)
+      .single()
 
-      for (const disaster of criticalDisasters || []) {
-        await this.createAlert({
-          type: "disaster",
-          severity: "emergency",
-          title: `Critical Disaster: ${disaster.title}`,
-          message: `Emergency response required for ${disaster.title} in ${disaster.location_name}`,
-          location: disaster.location
-            ? {
-                lat: disaster.location.coordinates[1],
-                lng: disaster.location.coordinates[0],
-                radius: 50000, // 50km radius
-                name: disaster.location_name,
-              }
-            : undefined,
-        })
+    if (alert) {
+      const acknowledgedBy = alert.acknowledged_by || []
+      if (!acknowledgedBy.includes(userId)) {
+        acknowledgedBy.push(userId)
+
+        await supabase
+          .from("alerts")
+          .update({ acknowledged_by: acknowledgedBy })
+          .eq("id", alertId)
       }
-    } catch (error) {
-      console.error("Disaster alert check failed:", error)
     }
   }
 
-  async checkResourceAlerts() {
-    try {
-      // Check for resources at capacity
-      const { data: fullResources } = await supabase
-        .from("resources")
-        .select("*")
-        .eq("status", "full")
-        .not("capacity", "is", null)
-        .gte("updated_at", new Date(Date.now() - 300000).toISOString()) // Last 5 minutes
+  async resolveAlert(alertId: string, userId: string): Promise<void> {
+    await supabase
+      .from("alerts")
+      .update({
+        resolved: true,
+        acknowledged_by: [userId]
+      })
+      .eq("id", alertId)
 
-      for (const resource of fullResources || []) {
-        await this.createAlert({
-          type: "resource",
-          severity: "warning",
-          title: `Resource at Capacity: ${resource.name}`,
-          message: `${resource.name} (${resource.type}) is now at full capacity (${resource.current_occupancy}/${resource.capacity})`,
-          location: resource.location
-            ? {
-                lat: resource.location.coordinates[1],
-                lng: resource.location.coordinates[0],
-                radius: 10000, // 10km radius
-                name: resource.location_name,
-              }
-            : undefined,
-        })
-      }
-    } catch (error) {
-      console.error("Resource alert check failed:", error)
-    }
+    serverSocketManager.emit("alert_resolved", { alertId, resolvedBy: userId })
   }
 }
 
 export const alertingService = new AlertingService()
-
-// Run automated checks every 5 minutes
-setInterval(() => {
-  alertingService.checkDisasterAlerts()
-  alertingService.checkResourceAlerts()
-}, 300000)

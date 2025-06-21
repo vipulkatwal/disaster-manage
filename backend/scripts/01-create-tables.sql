@@ -14,6 +14,9 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'resource_status') THEN
         CREATE TYPE resource_status AS ENUM ('available', 'in-use', 'unavailable');
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'alert_type') THEN
+        CREATE TYPE alert_type AS ENUM ('social_media', 'disaster', 'resource', 'system');
+    END IF;
 END$$;
 
 
@@ -160,3 +163,30 @@ BEGIN
       AND ST_DWithin(location, ST_MakePoint(lon, lat)::geography, radius_meters);
 END;
 $$ LANGUAGE plpgsql;
+
+-- Alerts table
+CREATE TABLE IF NOT EXISTS alerts (
+  id TEXT PRIMARY KEY,
+  type alert_type NOT NULL,
+  priority priority_level NOT NULL,
+  title TEXT NOT NULL,
+  message TEXT NOT NULL,
+  source TEXT,
+  location GEOGRAPHY(Point, 4326),
+  location_name TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  acknowledged_by TEXT[] DEFAULT '{}',
+  resolved BOOLEAN DEFAULT FALSE
+);
+CREATE INDEX IF NOT EXISTS alerts_location_gix ON alerts USING GIST (location);
+CREATE INDEX IF NOT EXISTS alerts_priority_idx ON alerts(priority);
+CREATE INDEX IF NOT EXISTS alerts_resolved_idx ON alerts(resolved);
+
+ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Alerts are publicly viewable." ON alerts;
+CREATE POLICY "Alerts are publicly viewable." ON alerts FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Users can create alerts." ON alerts;
+CREATE POLICY "Users can create alerts." ON alerts FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Users can update alerts." ON alerts;
+CREATE POLICY "Users can update alerts." ON alerts FOR UPDATE USING (true);
