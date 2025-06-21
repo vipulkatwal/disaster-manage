@@ -149,18 +149,23 @@ export default function RealtimeUpdates() {
   }
 
   return (
-    <div className="space-y-3 max-h-96 overflow-y-auto">
+    <div className="h-[500px] overflow-y-auto px-3 py-4 rounded-2xl bg-white/70 backdrop-blur-[2px] border border-pink-100 shadow-inner flex flex-col gap-6">
       {updates.map((update) => (
-        <div key={update.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-          <div className="flex-shrink-0 mt-0.5">{getTypeIcon(update.type)}</div>
+        <div
+          key={update.id}
+          className="flex items-start gap-3 p-3 rounded-xl bg-gradient-to-br from-white via-blue-50 to-pink-50 border border-pink-100 shadow-sm transition-all duration-200 hover:shadow-xl hover:scale-[1.02] hover:border-pink-300 group"
+        >
+          <div className="flex-shrink-0 mt-0.5">
+            {getTypeIcon(update.type)}
+          </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <Badge className={`${getPriorityColor(update.priority)} text-xs`}>{update.priority}</Badge>
-              <Badge variant="outline" className="text-xs capitalize">
+            <div className="flex items-center gap-2 mb-2">
+              <Badge className={`${getPriorityColor(update.priority)} text-xs group-hover:brightness-110 group-hover:scale-105 transition-all`}>{update.priority}</Badge>
+              <Badge variant="outline" className="text-xs capitalize border-pink-200 group-hover:border-pink-400 transition-all">
                 {update.type}
               </Badge>
             </div>
-            <p className="text-sm text-gray-800 mb-1">{update.message}</p>
+            <p className="text-base text-gray-800 mb-2 group-hover:text-pink-700 transition-colors leading-relaxed">{update.message}</p>
             <p className="text-xs text-gray-500">{new Date(update.timestamp).toLocaleTimeString()}</p>
           </div>
         </div>

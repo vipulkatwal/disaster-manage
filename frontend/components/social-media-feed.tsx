@@ -156,8 +156,8 @@ export default function SocialMediaFeed() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2">
+    <div className="px-3 py-6 rounded-2xl bg-white/70 backdrop-blur-[2px] border border-pink-100 shadow-inner flex flex-col gap-6">
+      <div className="flex gap-2 mb-4">
         {filterButtons.map((button) => (
           <Button
             key={button.key}
@@ -172,10 +172,13 @@ export default function SocialMediaFeed() {
         ))}
       </div>
 
-      <div className="space-y-4">
+      <div className="flex flex-col gap-6">
         {filteredPosts.map((post) => (
-          <Card key={post.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
+          <Card
+            key={post.id}
+            className="bg-white/80 rounded-2xl border border-pink-100 shadow-md transition-all duration-200 hover:bg-white/90 hover:shadow-xl hover:border-pink-400 hover:scale-[1.01]"
+          >
+            <CardContent className="p-6">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full ${getPlatformColor(post.platform)}`}></div>

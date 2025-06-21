@@ -141,23 +141,13 @@ export default function DisasterList({ limit }: DisasterListProps) {
     return <div className="text-center py-8">Loading disasters...</div>
   }
 
-  return (
-    <div className="space-y-4">
-      {!limit && (
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Input
-            placeholder="Search disasters..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
-        </div>
-      )}
-
-      <div className="space-y-4">
+  // If limit is set, render as a compact dashboard card (already handled above). If not, wrap in a premium glassy container.
+  if (limit) {
+    return (
+      <div className="h-[500px] overflow-y-auto px-3 py-4 rounded-2xl bg-white/70 backdrop-blur-[2px] border border-pink-100 shadow-inner flex flex-col gap-6">
         {filteredDisasters.map((disaster) =>
           editingDisaster?.id === disaster.id ? (
-            <Card key={disaster.id} className="bg-gray-50">
+            <Card key={disaster.id} className="bg-white/90 rounded-xl border border-pink-100 shadow-md">
               <CardContent className="p-6 space-y-4">
                 <Input
                   value={editingDisaster.title || ""}
@@ -177,81 +167,165 @@ export default function DisasterList({ limit }: DisasterListProps) {
               </CardContent>
             </Card>
           ) : (
-            <Card key={disaster.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-semibold">{disaster.title}</h3>
-                      <Badge className={getPriorityColor(disaster.priority)}>{disaster.priority}</Badge>
-                      <Badge variant="outline" className={getStatusColor(disaster.status)}>
-                        {disaster.status}
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {disaster.location_name}
-                    </div>
-
-                    <p className="text-gray-700 mb-3">{disaster.description}</p>
-
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {disaster.tags.map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 ml-4">
-                    {getVerificationIcon(disaster.verification_status)}
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(disaster)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(disaster.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+            <Card
+              key={disaster.id}
+              className="bg-white/80 rounded-xl border border-pink-100 shadow-md transition-all duration-200 group hover:bg-white/90 hover:shadow-xl hover:border-pink-400 hover:scale-[1.01]"
+            >
+              <CardContent className="p-6 relative flex flex-col gap-2">
+                {/* Action buttons: top right, outside title/badges row */}
+                <div className="absolute top-6 right-6 flex items-center gap-2 z-10">
+                  <Button size="icon" variant="ghost" className="hover:bg-pink-100 hover:text-pink-600 transition-colors">
+                    <Edit className="h-5 w-5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="hover:bg-red-100 hover:text-red-600 transition-colors">
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </div>
+                {/* Title row */}
+                <div className="flex flex-col gap-2 mb-3 mt-2">
+                  <h3 className="text-xl font-bold text-gray-900 mr-2 pr-16">{disaster.title}</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={getPriorityColor(disaster.priority) + " group-hover:brightness-110 group-hover:scale-105 transition-all"}>{disaster.priority}</Badge>
+                    <Badge variant="outline" className={getStatusColor(disaster.status) + " border-pink-200 group-hover:border-pink-400 transition-all"}>
+                      {disaster.status}
+                    </Badge>
                   </div>
                 </div>
+                <div className="flex items-center text-sm text-gray-600 mb-2">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {disaster.location_name}
+                </div>
+                <p className="text-base text-gray-800 mb-4 group-hover:text-pink-700 transition-colors leading-relaxed">{disaster.description}</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {disaster.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="bg-gray-100 text-gray-700">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+                {/* User info and status buttons: only once, at the bottom left */}
+                <div className="flex items-center text-xs text-gray-500 gap-2 mt-auto">
+                  <User className="h-4 w-4" />
+                  {disaster.owner_id || "reliefAdmin"}
+                  <Clock className="h-4 w-4 ml-2" />
+                  {new Date(disaster.created_at).toLocaleString()}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2"
+                    onClick={() => handleStatusUpdate(disaster.id, "monitoring")}
+                  >
+                    Mark Monitoring
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2 text-green-700 border-green-200 bg-green-50 hover:bg-green-100"
+                    onClick={() => handleStatusUpdate(disaster.id, "resolved")}
+                  >
+                    Mark Resolved
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )
+        )}
+      </div>
+    )
+  }
 
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>{disaster.owner_id}</span>
-                    <Clock className="h-4 w-4 ml-2" />
-                    <span>{new Date(disaster.created_at).toLocaleString()}</span>
+  // Full-page Disaster Management view (no limit): glassy, premium container
+  return (
+    <div className="w-full min-h-[600px] px-3 py-6 rounded-2xl bg-white/70 backdrop-blur-[2px] border border-pink-100 shadow-inner flex flex-col gap-8">
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <Input
+          placeholder="Search disasters..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1 shadow-sm rounded-xl border border-pink-100 focus:border-pink-400 focus:ring-pink-200"
+        />
+      </div>
+      <div className="flex flex-col gap-6">
+        {filteredDisasters.map((disaster) =>
+          editingDisaster?.id === disaster.id ? (
+            <Card key={disaster.id} className="bg-white/90 rounded-xl border border-pink-100 shadow-md">
+              <CardContent className="p-6 space-y-4">
+                <Input
+                  value={editingDisaster.title || ""}
+                  onChange={(e) => setEditingDisaster({ ...editingDisaster, title: e.target.value })}
+                  className="text-lg font-semibold"
+                />
+                <Input
+                  value={editingDisaster.description || ""}
+                  onChange={(e) => setEditingDisaster({ ...editingDisaster, description: e.target.value })}
+                />
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={handleCancelEdit}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveEdit}>Save</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card
+              key={disaster.id}
+              className="bg-white/80 rounded-xl border border-pink-100 shadow-md transition-all duration-200 group hover:bg-white/90 hover:shadow-xl hover:border-pink-400 hover:scale-[1.01]"
+            >
+              <CardContent className="p-6 relative flex flex-col gap-2">
+                {/* Action buttons: top right, outside title/badges row */}
+                <div className="absolute top-6 right-6 flex items-center gap-2 z-10">
+                  <Button size="icon" variant="ghost" className="hover:bg-pink-100 hover:text-pink-600 transition-colors">
+                    <Edit className="h-5 w-5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="hover:bg-red-100 hover:text-red-600 transition-colors">
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
+                </div>
+                {/* Title row */}
+                <div className="flex flex-col gap-2 mb-3 mt-2">
+                  <h3 className="text-xl font-bold text-gray-900 mr-2 pr-16">{disaster.title}</h3>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={getPriorityColor(disaster.priority) + " group-hover:brightness-110 group-hover:scale-105 transition-all"}>{disaster.priority}</Badge>
+                    <Badge variant="outline" className={getStatusColor(disaster.status) + " border-pink-200 group-hover:border-pink-400 transition-all"}>
+                      {disaster.status}
+                    </Badge>
                   </div>
-
-                  {disaster.status !== "resolved" && (
-                    <div className="flex items-center gap-2">
-                      {disaster.status === "active" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleStatusUpdate(disaster.id, "monitoring")}
-                        >
-                          Mark Monitoring
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStatusUpdate(disaster.id, "resolved")}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        Mark Resolved
-                      </Button>
-                    </div>
-                  )}
+                </div>
+                <div className="flex items-center text-sm text-gray-600 mb-2">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {disaster.location_name}
+                </div>
+                <p className="text-base text-gray-800 mb-4 group-hover:text-pink-700 transition-colors leading-relaxed">{disaster.description}</p>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {disaster.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="bg-gray-100 text-gray-700">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+                {/* User info and status buttons: only once, at the bottom left */}
+                <div className="flex items-center text-xs text-gray-500 gap-2 mt-auto">
+                  <User className="h-4 w-4" />
+                  {disaster.owner_id || "reliefAdmin"}
+                  <Clock className="h-4 w-4 ml-2" />
+                  {new Date(disaster.created_at).toLocaleString()}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2"
+                    onClick={() => handleStatusUpdate(disaster.id, "monitoring")}
+                  >
+                    Mark Monitoring
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-2 text-green-700 border-green-200 bg-green-50 hover:bg-green-100"
+                    onClick={() => handleStatusUpdate(disaster.id, "resolved")}
+                  >
+                    Mark Resolved
+                  </Button>
                 </div>
               </CardContent>
             </Card>

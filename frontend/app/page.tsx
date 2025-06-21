@@ -305,10 +305,28 @@ export default function DisasterResponseDashboard() {
       {/* SidebarMenuItem component */}
       <style jsx>{`
         .sidebar-menu-item {
-          @apply flex items-center px-4 py-3 rounded-xl font-semibold text-gray-700 transition-all duration-200 cursor-pointer hover:bg-pink-100 hover:text-pink-700;
+          @apply flex items-center px-4 py-3 rounded-xl font-semibold text-gray-700 transition-all duration-200 cursor-pointer;
+          transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.2s;
+        }
+        .sidebar-menu-item:hover {
+          background: linear-gradient(90deg, #ffe0ef 0%, #e0eaff 100%);
+          color: #d72660;
+          box-shadow: 0 2px 12px 0 rgba(215,38,96,0.08);
+          transform: scale(1.04);
         }
         .sidebar-menu-item.active {
           @apply bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg;
+          box-shadow: 0 4px 16px 0 rgba(215,38,96,0.12);
+          color: #fff;
+        }
+        .sidebar-menu-item .flex-shrink-0 svg {
+          transition: color 0.2s;
+        }
+        .sidebar-menu-item:hover .flex-shrink-0 svg {
+          color: #d72660;
+        }
+        .sidebar-menu-item.active .flex-shrink-0 svg {
+          color: #fff;
         }
       `}</style>
 
@@ -325,13 +343,19 @@ export default function DisasterResponseDashboard() {
 }
 
 function SidebarMenuItem({ icon, label, value, activeTab, setActiveTab }: any) {
+  const isActive = activeTab === value;
   return (
     <div
-      className={`sidebar-menu-item${activeTab === value ? " active" : ""}`}
+      className={
+        `flex flex-row items-center gap-3 px-4 py-3 rounded-xl font-semibold cursor-pointer transition duration-200 ` +
+        (isActive
+          ? 'bg-gradient-to-r from-pink-500 to-red-500 text-white shadow-lg'
+          : 'text-gray-700 hover:bg-gradient-to-r hover:from-pink-100 hover:to-blue-100 hover:text-pink-600 hover:shadow-md hover:scale-[1.04]')
+      }
       onClick={() => setActiveTab(value)}
     >
-      {icon}
-      <span>{label}</span>
+      <span className="flex-shrink-0 text-inherit">{icon}</span>
+      <span className="whitespace-nowrap text-inherit">{label}</span>
     </div>
   )
 }

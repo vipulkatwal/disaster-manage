@@ -164,8 +164,8 @@ export default function AnalyticsDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Analytics Dashboard</h2>
+      <div className="flex items-center justify-between px-2 py-2 rounded-2xl bg-white/70 backdrop-blur-[2px] border border-pink-100 shadow-inner mb-2">
+        <h2 className="text-2xl font-bold text-gray-900">Analytics Dashboard</h2>
         <div className="flex gap-2">
           {timeframeButtons.map((button) => (
             <Button
@@ -173,6 +173,7 @@ export default function AnalyticsDashboard() {
               variant={timeframe === button.key ? "default" : "outline"}
               size="sm"
               onClick={() => setTimeframe(button.key)}
+              className="rounded-xl"
             >
               {button.label}
             </Button>
@@ -185,7 +186,7 @@ export default function AnalyticsDashboard() {
         {overviewCards.map((card, index) => {
           const IconComponent = card.icon
           return (
-            <Card key={index}>
+            <Card key={index} className="bg-white/80 rounded-2xl border border-pink-100 shadow-md">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -203,7 +204,7 @@ export default function AnalyticsDashboard() {
 
       {/* Charts */}
       <Tabs defaultValue="trends" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-4 rounded-2xl bg-white/70 border border-pink-100 mb-2">
           <TabsTrigger value="trends">Trends</TabsTrigger>
           <TabsTrigger value="distribution">Distribution</TabsTrigger>
           <TabsTrigger value="verification">Verification</TabsTrigger>
@@ -212,37 +213,55 @@ export default function AnalyticsDashboard() {
 
         <TabsContent value="trends" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className="bg-white/80 rounded-2xl border border-pink-100 shadow-md">
               <CardHeader>
                 <CardTitle>Disaster Timeline</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={data.timeline}>
+                  <AreaChart data={data.timeline} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
                     <YAxis />
                     <Tooltip />
-                    <Area type="monotone" dataKey="disasters" stackId="1" stroke="#ef4444" fill="#ef4444" />
-                    <Area type="monotone" dataKey="reports" stackId="1" stroke="#3b82f6" fill="#3b82f6" />
-                    <Area type="monotone" dataKey="critical" stackId="1" stroke="#dc2626" fill="#dc2626" />
+                    <Area type="monotone" dataKey="disasters" stackId="1" stroke="#ef4444" fill="url(#disasterGradient)" strokeWidth={3} />
+                    <Area type="monotone" dataKey="reports" stackId="1" stroke="#3b82f6" fill="url(#reportGradient)" strokeWidth={3} />
+                    <Area type="monotone" dataKey="critical" stackId="1" stroke="#dc2626" fill="url(#criticalGradient)" strokeWidth={3} />
+                    <defs>
+                      <linearGradient id="disasterGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="reportGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      </linearGradient>
+                      <linearGradient id="criticalGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#dc2626" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#dc2626" stopOpacity={0.1}/>
+                      </linearGradient>
+                    </defs>
                   </AreaChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white/80 rounded-2xl border border-pink-100 shadow-md">
               <CardHeader>
                 <CardTitle>Top Tags</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.tagData}>
+                  <BarChart data={chartData.tagData} barSize={32} radius={[8, 8, 0, 0]}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="tag" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#3b82f6" />
+                    <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]}>
+                      {chartData.tagData.map((entry, index) => (
+                        <Cell key={`cell-tag-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -252,7 +271,7 @@ export default function AnalyticsDashboard() {
 
         <TabsContent value="distribution" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
+            <Card className="bg-white/80 rounded-2xl border border-pink-100 shadow-md">
               <CardHeader>
                 <CardTitle>Disasters by Priority</CardTitle>
               </CardHeader>
@@ -270,7 +289,7 @@ export default function AnalyticsDashboard() {
                       dataKey="count"
                     >
                       {chartData.priorityData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-priority-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -279,18 +298,22 @@ export default function AnalyticsDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="bg-white/80 rounded-2xl border border-pink-100 shadow-md">
               <CardHeader>
                 <CardTitle>Disasters by Status</CardTitle>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.statusData}>
+                  <BarChart data={chartData.statusData} barSize={32} radius={[8, 8, 0, 0]}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="status" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="count" fill="#22c55e" />
+                    <Bar dataKey="count" fill="#22c55e" radius={[8, 8, 0, 0]}>
+                      {chartData.statusData.map((entry, index) => (
+                        <Cell key={`cell-status-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -299,7 +322,7 @@ export default function AnalyticsDashboard() {
         </TabsContent>
 
         <TabsContent value="verification" className="space-y-6">
-          <Card>
+          <Card className="bg-white/80 rounded-2xl border border-pink-100 shadow-md">
             <CardHeader>
               <CardTitle>Verification Metrics</CardTitle>
             </CardHeader>
@@ -326,18 +349,22 @@ export default function AnalyticsDashboard() {
         </TabsContent>
 
         <TabsContent value="geography" className="space-y-6">
-          <Card>
+          <Card className="bg-white/80 rounded-2xl border border-pink-100 shadow-md">
             <CardHeader>
               <CardTitle>Geographic Distribution</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data.geographicDistribution}>
+                <BarChart data={data.geographicDistribution} barSize={32} radius={[8, 8, 0, 0]}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="location" />
                   <YAxis />
                   <Tooltip />
-                  <Bar dataKey="count" fill="#8b5cf6" />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[8, 8, 0, 0]}>
+                    {data.geographicDistribution.map((entry, index) => (
+                      <Cell key={`cell-geo-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>

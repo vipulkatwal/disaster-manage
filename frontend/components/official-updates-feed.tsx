@@ -94,24 +94,26 @@ export default function OfficialUpdatesFeed() {
   }
 
   return (
-    <div className="space-y-4">
-       <h2 className="text-2xl font-bold tracking-tight">Official Updates</h2>
+    <div className="flex flex-col gap-6">
       {updates.map((update, index) => (
-        <Card key={index}>
+        <Card
+          key={index}
+          className="bg-white/80 rounded-2xl border border-pink-100 shadow-md transition-all duration-200 hover:bg-white/90 hover:shadow-xl hover:border-pink-400 hover:scale-[1.01]"
+        >
           <CardHeader>
-             <div className="flex items-center justify-between">
-                <Badge className={getSourceColor(update.source)}>{update.source}</Badge>
-                <span className="text-xs text-gray-500">{update.timestamp}</span>
-             </div>
-            <CardTitle className="pt-2">{update.title}</CardTitle>
+            <div className="flex items-center justify-between">
+              <Badge className={getSourceColor(update.source)}>{update.source}</Badge>
+              <span className="text-xs text-gray-500">{update.timestamp}</span>
+            </div>
+            <CardTitle className="pt-2 text-xl font-bold text-gray-900">{update.title}</CardTitle>
           </CardHeader>
           <CardContent>
-            <CardDescription>{update.description}</CardDescription>
+            <CardDescription className="text-base text-gray-700 mb-2">{update.description}</CardDescription>
             <a
               href={update.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-blue-600 hover:underline mt-4 inline-flex items-center"
+              className="text-sm font-medium text-blue-600 hover:underline mt-2 inline-flex items-center"
             >
               Read More <ExternalLink className="ml-1 h-4 w-4" />
             </a>

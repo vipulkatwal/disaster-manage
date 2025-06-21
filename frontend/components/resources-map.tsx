@@ -201,65 +201,60 @@ export default function ResourcesMap() {
       {/* Map Placeholder */}
       <ResourcesMapView resources={filteredResources} />
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {filteredResources.map((resource) => (
-          <Card key={resource.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold">{resource.name}</h3>
-                    <Badge className={getTypeColor(resource.type)}>{resource.type}</Badge>
-                    <Badge variant="outline" className={getStatusColor(resource.status)}>
-                      {resource.status}
-                    </Badge>
+          <Card
+            key={resource.id}
+            className="bg-white/80 rounded-2xl border border-pink-100 shadow-md transition-all duration-200 hover:bg-white/90 hover:shadow-xl hover:border-pink-400 hover:scale-[1.01]"
+          >
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-bold text-gray-900">{resource.name}</h3>
+                  <Badge className={getTypeColor(resource.type)}>{resource.type}</Badge>
+                  <Badge variant="outline" className={getStatusColor(resource.status)}>
+                    {resource.status}
+                  </Badge>
+                </div>
+                <div className="flex items-center text-xs text-gray-600">
+                  <MapPin className="h-4 w-4 mr-1" />
+                  {resource.location_name}
+                </div>
+                <div className="flex items-center text-xs text-gray-600">
+                  <Phone className="h-4 w-4 mr-1" />
+                  {resource.contact}
+                </div>
+                <div className="flex items-center text-xs text-gray-600">
+                  <Clock className="h-4 w-4 mr-1" />
+                  {resource.hours}
+                </div>
+                {resource.capacity && (
+                  <div className="flex items-center text-xs text-gray-600">
+                    <Users className="h-4 w-4 mr-1" />
+                    {resource.current_occupancy}/{resource.capacity} occupied
                   </div>
-
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {resource.location_name}
+                )}
+                {resource.services && resource.services.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 mb-1">Services:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {resource.services.map((service) => (
+                        <Badge key={service} variant="outline" className="text-xs">
+                          {service}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
+                )}
+                <div className="flex gap-2 mt-2">
+                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                    <Navigation className="h-4 w-4 mr-1" />
+                    Get Directions
+                  </Button>
+                  <Button size="sm" variant="outline">
                     <Phone className="h-4 w-4 mr-1" />
-                    {resource.contact}
-                  </div>
-
-                  <div className="flex items-center text-sm text-gray-600 mb-3">
-                    <Clock className="h-4 w-4 mr-1" />
-                    {resource.hours}
-                  </div>
-
-                  {resource.capacity && (
-                    <div className="flex items-center text-sm text-gray-600 mb-3">
-                      <Users className="h-4 w-4 mr-1" />
-                      {resource.current_occupancy}/{resource.capacity} occupied
-                    </div>
-                  )}
-
-                  {resource.services && resource.services.length > 0 && (
-                    <div className="mb-4">
-                      <p className="text-sm font-medium text-gray-700 mb-2">Services:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {resource.services.map((service) => (
-                          <Badge key={service} variant="outline" className="text-xs">
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                      <Navigation className="h-4 w-4 mr-1" />
-                      Get Directions
-                    </Button>
-                    <Button size="sm" variant="outline">
-                      <Phone className="h-4 w-4 mr-1" />
-                      Call
-                    </Button>
-                  </div>
+                    Call
+                  </Button>
                 </div>
               </div>
             </CardContent>
