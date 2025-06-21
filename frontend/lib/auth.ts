@@ -30,10 +30,9 @@ const MOCK_USERS: Record<string, User> = {
 
 export function getCurrentUser(): User {
   // In a real app, this would check session/token
-  // For demo, we'll rotate between users
-  const userIds = Object.keys(MOCK_USERS)
-  const randomUser = userIds[Math.floor(Math.random() * userIds.length)]
-  return MOCK_USERS[randomUser]
+  // For demo purposes, we will consistently use the admin user
+  // to ensure all functionality is available.
+  return MOCK_USERS.reliefAdmin;
 }
 
 export function hasPermission(user: User, permission: string): boolean {
@@ -42,7 +41,7 @@ export function hasPermission(user: User, permission: string): boolean {
 
 export async function logAuditTrail(
   entityType: string,
-  entityId: string,
+  entityId: number,
   action: string,
   userId: string,
   details?: any,
@@ -54,6 +53,6 @@ export async function logAuditTrail(
     details: details || {},
   }
 
-  // In a real implementation, this would update the audit_trail JSONB column
+  // In a real implementation, this would insert into the audit_trail table
   console.log(`Audit: ${entityType}:${entityId}`, auditEntry)
 }

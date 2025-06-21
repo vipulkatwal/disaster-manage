@@ -1,30 +1,29 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import { Textarea } from "../components/ui/textarea"
+import { Label } from "../components/ui/label"
+import { Badge } from "../components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { X, Zap, CheckCircle, AlertCircle } from "lucide-react"
-import { postDisaster, verifyImage } from "@/lib/api"
-import { extractLocationFromText } from "@/lib/gemini"
+import { postDisaster, verifyImage } from "../lib/api"
+import { extractLocationFromText } from "../lib/gemini"
 
 interface DisasterFormProps {
   onClose: () => void
-  onSuccess?: (disaster: any) => void
 }
 
-export default function DisasterForm({ onClose, onSuccess }: DisasterFormProps) {
+export default function DisasterForm({ onClose }: DisasterFormProps) {
   const [formData, setFormData] = useState({
     title: "",
     location_name: "",
     description: "",
     tags: [] as string[],
-    priority: "medium" as const,
+    priority: "medium" as "low" | "medium" | "high" | "critical",
     imageUrl: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -114,7 +113,6 @@ export default function DisasterForm({ onClose, onSuccess }: DisasterFormProps) 
         }
       }
 
-      onSuccess?.(disaster)
       onClose()
     } catch (error) {
       console.error("Failed to create disaster:", error)

@@ -1,6 +1,6 @@
 // Step 11: Frontend API Layer
 export interface Disaster {
-  id: string
+  id: number
   title: string
   location_name: string
   description: string
@@ -14,7 +14,7 @@ export interface Disaster {
 }
 
 export interface SocialPost {
-  id: string
+  id: number
   platform: string
   author: string
   content: string
@@ -31,8 +31,8 @@ export interface SocialPost {
 }
 
 export interface Resource {
-  id: string
-  disaster_id: string
+  id: number
+  disaster_id: number
   name: string
   type: "shelter" | "medical" | "food" | "supplies" | "evacuation"
   location_name: string
@@ -75,7 +75,7 @@ export async function postDisaster(data: {
   return response.json()
 }
 
-export async function updateDisaster(id: string, data: Partial<Disaster>): Promise<Disaster> {
+export async function updateDisaster(id: number, data: Partial<Disaster>): Promise<Disaster> {
   const response = await fetch(`/api/disasters/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -85,7 +85,7 @@ export async function updateDisaster(id: string, data: Partial<Disaster>): Promi
   return response.json()
 }
 
-export async function deleteDisaster(id: string): Promise<void> {
+export async function deleteDisaster(id: number): Promise<void> {
   const response = await fetch(`/api/disasters/${id}`, {
     method: "DELETE",
   })
@@ -109,7 +109,7 @@ export async function getSocialMedia(disasterId: string): Promise<SocialPost[]> 
 }
 
 export async function getNearbyResources(
-  disasterId: string,
+  disasterId: number,
   lat?: number,
   lon?: number,
   radius?: number,
@@ -125,7 +125,7 @@ export async function getNearbyResources(
 }
 
 export async function verifyImage(
-  disasterId: string,
+  disasterId: number,
   imageUrl: string,
 ): Promise<{
   isAuthentic: boolean

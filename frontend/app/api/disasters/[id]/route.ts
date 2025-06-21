@@ -1,10 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { supabase } from "@/lib/supabase"
-import { getCurrentUser, hasPermission, logAuditTrail } from "@/lib/auth"
+import { supabase } from "../../../../lib/supabase"
+import { getCurrentUser, hasPermission, logAuditTrail } from "../../../../lib/auth"
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = getCurrentUser()
+    const id = parseInt(params.id, 10)
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 })
+    }
 
     if (!hasPermission(user, "update_disaster")) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
@@ -22,15 +27,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     if (priority) updateData.priority = priority
     if (verification_status) updateData.verification_status = verification_status
 
-    updateData.updated_at = new Date().toISOString()
-
-    const { data, error } = await supabase.from("disasters").update(updateData).eq("id", params.id).select().single()
+    const { data, error } = await supabase.from("disasters").update(updateData).eq("id", id).select().single()
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    await logAuditTrail("disaster", params.id, "updated", user.id, updateData)
+    await logAuditTrail("disaster", id, "updated", user.id, updateData)
 
     return NextResponse.json(data)
   } catch (error) {
@@ -41,18 +44,23 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = getCurrentUser()
+    const id = parseInt(params.id, 10)
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: "Invalid ID format" }, { status: 400 })
+    }
 
     if (!hasPermission(user, "delete_disaster")) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 })
     }
 
-    const { error } = await supabase.from("disasters").delete().eq("id", params.id)
+    const { error } = await supabase.from("disasters").delete().eq("id", id)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    await logAuditTrail("disaster", params.id, "deleted", user.id)
+    await logAuditTrail("disaster", id, "deleted", user.id)
 
     return NextResponse.json({ success: true })
   } catch (error) {

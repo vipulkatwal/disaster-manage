@@ -5,10 +5,6 @@ const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 async function callGeminiAPI(prompt: string): Promise<string> {
-  const cacheKey = `gemini:${Buffer.from(prompt).toString("base64").slice(0, 50)}`
-  const cached = await getFromCache(cacheKey)
-  if (cached) return cached
-
   try {
     const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
       method: "POST",
@@ -19,7 +15,6 @@ async function callGeminiAPI(prompt: string): Promise<string> {
     })
     const data = await response.json()
     const result = data.candidates?.[0]?.content?.parts?.[0]?.text || ""
-    await setCache(cacheKey, result, 1)
     return result
   } catch (error) {
     console.error("Gemini API error:", error)
