@@ -252,7 +252,7 @@ export default function AnalyticsDashboard() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.tagData} barSize={32} radius={[8, 8, 0, 0]}>
+                  <BarChart data={chartData.tagData} barSize={32}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="tag" />
                     <YAxis />
@@ -283,7 +283,9 @@ export default function AnalyticsDashboard() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ priority, percent }) => `${priority} ${(percent * 100).toFixed(0)}%`}
+                      label={({ priority, percent, count }) =>
+                        count > 0 ? `${priority} ${(percent * 100).toFixed(0)}%` : ""
+                      }
                       outerRadius={80}
                       fill="#8884d8"
                       dataKey="count"
@@ -295,6 +297,17 @@ export default function AnalyticsDashboard() {
                     <Tooltip />
                   </PieChart>
                 </ResponsiveContainer>
+                {/* Legend */}
+                <div className="flex flex-wrap gap-4 justify-center mt-4">
+                  {chartData.priorityData.map((entry, index) => (
+                    entry.count > 0 && (
+                      <div key={entry.priority} className="flex items-center gap-2">
+                        <span className="inline-block w-4 h-4 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                        <span className="text-sm text-gray-700 capitalize">{entry.priority}</span>
+                      </div>
+                    )
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
@@ -304,7 +317,7 @@ export default function AnalyticsDashboard() {
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData.statusData} barSize={32} radius={[8, 8, 0, 0]}>
+                  <BarChart data={chartData.statusData} barSize={32}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="status" />
                     <YAxis />
@@ -355,7 +368,7 @@ export default function AnalyticsDashboard() {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data.geographicDistribution} barSize={32} radius={[8, 8, 0, 0]}>
+                <BarChart data={data.geographicDistribution} barSize={32}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="location" />
                   <YAxis />
