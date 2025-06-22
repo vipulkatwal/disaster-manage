@@ -1,5 +1,6 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const supabase = require("../services/supabase");
 const { getCachedData, setCachedData } = require("../middleware/cache");
 const { fetchSocialMediaData } = require("../services/socialMedia");
 const logger = require("../utils/logger");
@@ -9,27 +10,39 @@ const priorityAlertSystem = require("../services/priorityAlert");
 const mockSocialMediaData = [
 	{
 		id: "1",
+		platform: "twitter",
 		post: "#floodrelief Need food and water in Lower Manhattan. Families stranded!",
-		user: "citizen_helper1",
+		username: "citizen_helper1",
 		timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
 		priority: "high",
 		verified: false,
+		location: "Lower Manhattan, NYC",
+		hashtags: ["floodrelief", "emergency"],
+		analysis: null,
 	},
 	{
 		id: "2",
+		platform: "twitter",
 		post: "Offering shelter in Brooklyn Heights for flood victims. Contact me! #disasterhelp",
-		user: "brooklyn_resident",
+		username: "brooklyn_resident",
 		timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
 		priority: "medium",
 		verified: false,
+		location: "Brooklyn Heights, NYC",
+		hashtags: ["disasterhelp", "shelter"],
+		analysis: null,
 	},
 	{
 		id: "3",
+		platform: "twitter",
 		post: "URGENT: Medical supplies needed at evacuation center on 42nd Street #emergencyhelp",
-		user: "medical_volunteer",
+		username: "medical_volunteer",
 		timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
 		priority: "urgent",
 		verified: false,
+		location: "42nd Street, NYC",
+		hashtags: ["emergencyhelp", "medical"],
+		analysis: null,
 	},
 ];
 
@@ -40,9 +53,20 @@ const getSocialMediaReports = async (req, res) => {
 
 		logger.info(`Fetching social media reports for disaster ${disaster_id}`);
 
+		// First try to get cached data
+		const cacheKey = `social_media_${disaster_id}_${keywords || "all"}`;
+		const cachedData = await getCachedData(cacheKey);
+
+		if (cachedData) {
+			logger.info(
+				`Returning cached social media data for disaster ${disaster_id}`
+			);
+			return res.json(cachedData);
+		}
+
 		const posts = await socialMediaService.fetchSocialMediaData(
 			keywords,
-			null,
+			disaster_id,
 			limit
 		);
 
@@ -66,15 +90,36 @@ const getSocialMediaReports = async (req, res) => {
 			);
 		}
 
-		// Emit real-time updates
-		req.io.emit("social_media_updated", {
-			disaster_id,
-			posts: processedPosts,
-			alerts,
-			timestamp: new Date().toISOString(),
-		});
+		// Store processed posts in database
+		if (processedPosts.length > 0) {
+			try {
+				const postsToInsert = processedPosts.map((post) => ({
+					id: post.id,
+					disaster_id,
+					platform: post.platform || "twitter",
+					post: post.post,
+					username: post.username,
+					timestamp: post.timestamp,
+					priority: post.priority || "low",
+					verified: post.verified || false,
+					location: post.location,
+					hashtags: post.hashtags || [],
+					analysis: post.analysis,
+				}));
 
-		res.json({
+				const { error: insertError } = await supabase
+					.from("social_media_posts")
+					.upsert(postsToInsert, { onConflict: "id" });
+
+				if (insertError) {
+					logger.warn("Failed to store social media posts:", insertError);
+				}
+			} catch (error) {
+				logger.warn("Error storing social media posts:", error);
+			}
+		}
+
+		const response = {
 			posts: processedPosts,
 			alerts,
 			summary: {
@@ -84,7 +129,20 @@ const getSocialMediaReports = async (req, res) => {
 				medium: processedPosts.filter((p) => p.priority === "medium").length,
 				low: processedPosts.filter((p) => p.priority === "low").length,
 			},
+		};
+
+		// Cache the response for 15 minutes
+		await setCachedData(cacheKey, response, 15 * 60 * 1000);
+
+		// Emit real-time updates
+		req.io.emit("social_media_updated", {
+			disaster_id,
+			posts: processedPosts,
+			alerts,
+			timestamp: new Date().toISOString(),
 		});
+
+		res.json(response);
 	} catch (error) {
 		logger.error("Error fetching social media reports:", error);
 		res.status(500).json({
@@ -203,67 +261,90 @@ const processSocialMediaData = (data, keywords) => {
 };
 
 const fetchOfficialUpdates = async () => {
-	try {
-		const mockOfficialUpdates = [
-			{
-				id: "1",
-				source: "FEMA",
-				title: "Emergency Shelter Locations Updated",
-				content:
-					"New emergency shelters have been opened in Manhattan and Brooklyn. See locations below.",
-				url: "https://fema.gov/disaster-updates",
-				published_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-				severity: "high",
-			},
-			{
-				id: "2",
-				source: "NYC Emergency Management",
-				title: "Water Distribution Points Active",
-				content:
-					"Water distribution is now active at Central Park and Prospect Park locations.",
-				url: "https://nyc.gov/emergency",
-				published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-				severity: "medium",
-			},
-			{
-				id: "3",
-				source: "Red Cross",
-				title: "Volunteer Registration Open",
-				content:
-					"Red Cross is accepting volunteer registrations for disaster relief efforts.",
-				url: "https://redcross.org/volunteer",
-				published_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-				severity: "low",
-			},
-		];
+	const sources = [
+		{
+			name: "FEMA",
+			url: "https://www.fema.gov/news-disasters",
+			selector: ".news-item",
+		},
+		{
+			name: "Red Cross",
+			url: "https://www.redcross.org/news",
+			selector: ".news-item",
+		},
+		{
+			name: "NYC Emergency",
+			url: "https://www1.nyc.gov/site/em/index.page",
+			selector: ".alert-item",
+		},
+	];
 
-		return mockOfficialUpdates;
-	} catch (error) {
-		logger.error("Error fetching official updates:", error);
-		throw error;
+	const updates = [];
+
+	for (const source of sources) {
+		try {
+			const response = await axios.get(source.url, {
+				timeout: 5000,
+				headers: {
+					"User-Agent":
+						"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+				},
+			});
+
+			const $ = cheerio.load(response.data);
+			const items = $(source.selector).slice(0, 5);
+
+			items.each((i, element) => {
+				const title = $(element).find("h3, h4, .title").first().text().trim();
+				const content = $(element).find("p, .content").first().text().trim();
+				const url = $(element).find("a").first().attr("href");
+
+				if (title && content) {
+					updates.push({
+						id: `${source.name}_${i}_${Date.now()}`,
+						source: source.name,
+						title,
+						content,
+						url: url ? new URL(url, source.url).href : null,
+						published_at: new Date().toISOString(),
+						severity: "medium",
+						category: "official",
+						contact: null,
+						tags: [],
+					});
+				}
+			});
+		} catch (error) {
+			logger.warn(
+				`Failed to fetch updates from ${source.name}:`,
+				error.message
+			);
+		}
 	}
+
+	return updates;
 };
 
 const analyzeSocialMediaPost = async (req, res) => {
 	try {
-		const { post } = req.body;
+		const { post, image_url } = req.body;
 
-		if (!post || !post.post) {
-			return res.status(400).json({ error: "Post content is required" });
+		if (!post && !image_url) {
+			return res.status(400).json({
+				error: "Post content or image URL is required",
+			});
 		}
 
-		const analysis = await priorityAlertSystem.analyzeSocialMediaPost(post);
-		const alert = await priorityAlertSystem.generateAlert(post, analysis);
-
-		res.json({
-			analysis,
-			alert,
-			recommendations: generateRecommendations(analysis),
+		const analysis = await priorityAlertSystem.analyzePost({
+			post,
+			image_url,
 		});
+
+		res.json(analysis);
 	} catch (error) {
 		logger.error("Error analyzing social media post:", error);
 		res.status(500).json({
-			error: "Failed to analyze social media post",
+			error: "Failed to analyze post",
 			message: error.message,
 		});
 	}
@@ -275,21 +356,17 @@ const generateRecommendations = (analysis) => {
 	if (analysis.priority === "urgent") {
 		recommendations.push("Immediate response required");
 		recommendations.push("Contact emergency services");
-		recommendations.push("Verify location and situation");
+		recommendations.push("Verify location and needs");
 	}
 
-	if (analysis.analysis.disasterTypes.length > 0) {
-		recommendations.push(
-			`Prepare for ${analysis.analysis.disasterTypes[0]} response`
-		);
+	if (analysis.priority === "high") {
+		recommendations.push("High priority response needed");
+		recommendations.push("Coordinate with local authorities");
+		recommendations.push("Assess resource requirements");
 	}
 
-	if (analysis.analysis.locations.length > 0) {
-		recommendations.push("Dispatch resources to identified locations");
-	}
-
-	if (analysis.confidence < 0.5) {
-		recommendations.push("Verify information before taking action");
+	if (analysis.confidence < 0.7) {
+		recommendations.push("Low confidence - manual verification recommended");
 	}
 
 	return recommendations;
