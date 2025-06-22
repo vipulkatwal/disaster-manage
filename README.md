@@ -28,7 +28,6 @@ Geo Aid+ is a comprehensive, full-stack platform designed to provide critical, r
 
 ## 📸 Screenshots
 
-<details>
 <summary>Click to view the app in action</summary>
 <br/>
 <em>The beautiful, pixel-perfect dashboard provides a complete overview of the situation.</em>
@@ -45,7 +44,7 @@ Geo Aid+ is a comprehensive, full-stack platform designed to provide critical, r
 <br/><br/>
 <em>Aggregate and view official updates from trusted sources.</em>
 <img src="screenshots/browse.png" alt="Browse Official Updates"/>
-</details>
+
 
 ## 🛠️ Tech Stack
 
