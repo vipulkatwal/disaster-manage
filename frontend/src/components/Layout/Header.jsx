@@ -1,16 +1,19 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, NavLink as RouterNavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Menu, 
-  Bell, 
-  Shield, 
-  Wifi, 
-  WifiOff, 
+import {
+  Menu,
+  Bell,
+  Shield,
+  Wifi,
+  WifiOff,
   User,
   AlertTriangle,
   MessageCircle,
-  Globe
+  Globe,
+  LayoutDashboard,
+  List,
+  Map
 } from 'lucide-react';
 
 const Header = ({ user, connected, onMenuClick }) => {
@@ -38,11 +41,19 @@ const Header = ({ user, connected, onMenuClick }) => {
     }
   };
 
+  const navItems = [
+    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/disasters', icon: List, label: 'Disasters' },
+    { to: '/social-media', icon: MessageCircle, label: 'Social Media' },
+    { to: '/browse', icon: Globe, label: 'Browse' },
+    { to: '/map', icon: Map, label: 'Map' },
+  ];
+
   return (
     <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50"
+      className="bg-slate-100/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm sticky top-0 z-50"
     >
       <div className="w-full px-3 sm:px-4 lg:px-6">
         <div className="flex justify-between items-center h-16">
@@ -64,7 +75,7 @@ const Header = ({ user, connected, onMenuClick }) => {
                 </div>
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white animate-pulse"></div>
               </div>
-              
+
               <div className="hidden sm:block min-w-0">
                 <h1 className="text-lg font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent whitespace-nowrap">
                   Emergency Response
@@ -76,28 +87,13 @@ const Header = ({ user, connected, onMenuClick }) => {
 
           {/* Center Navigation */}
           <nav className="hidden lg:flex items-center justify-center flex-1 max-w-2xl mx-4">
-            <div className="flex items-center space-x-1 bg-gray-50 rounded-lg p-1">
-              <NavLink to="/" active={location.pathname === '/'}>
-                Dashboard
-              </NavLink>
-              <NavLink to="/disasters" active={location.pathname === '/disasters'}>
-                Disasters
-              </NavLink>
-              <NavLink to="/social-media" active={location.pathname === '/social-media'}>
-                <div className="flex items-center space-x-1.5">
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  <span>Social Media</span>
-                </div>
-              </NavLink>
-              <NavLink to="/browse" active={location.pathname === '/browse'}>
-                <div className="flex items-center space-x-1.5">
-                  <Globe className="w-3.5 h-3.5" />
-                  <span>Browse</span>
-                </div>
-              </NavLink>
-              <NavLink to="/map" active={location.pathname === '/map'}>
-                Map
-              </NavLink>
+            <div className="flex items-center space-x-2 bg-white/40 border border-white/50 shadow-inner rounded-full p-1.5">
+              {navItems.map((item) => (
+                <NavLink key={item.to} to={item.to}>
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
             </div>
           </nav>
 
@@ -105,8 +101,8 @@ const Header = ({ user, connected, onMenuClick }) => {
           <div className="flex items-center space-x-2 sm:space-x-3">
             {/* Connection Status */}
             <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
-              connected 
-                ? 'bg-green-100 text-green-800' 
+              connected
+                ? 'bg-green-100 text-green-800'
                 : 'bg-red-100 text-red-800'
             }`}>
               {connected ? (
@@ -181,17 +177,19 @@ const Header = ({ user, connected, onMenuClick }) => {
   );
 };
 
-const NavLink = ({ to, children, active }) => (
-  <Link
+const NavLink = ({ to, children }) => (
+  <RouterNavLink
     to={to}
-    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 whitespace-nowrap ${
-      active
-        ? 'bg-white text-red-700 shadow-sm'
-        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-    }`}
+    className={({ isActive }) =>
+      `flex items-center space-x-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 ${
+        isActive
+          ? 'bg-white text-gray-900 shadow-md'
+          : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
+      }`
+    }
   >
     {children}
-  </Link>
+  </RouterNavLink>
 );
 
 export default Header;
