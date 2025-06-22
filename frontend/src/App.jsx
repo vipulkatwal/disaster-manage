@@ -34,33 +34,36 @@ function App() {
     name: 'Emergency Coordinator'
   }), []);
 
-  const initializeApp = useCallback(async () => {
-    try {
-      setUser(defaultUser);
-
-      // Use the proper API method to fetch disasters
-      const response = await disasterApi.getAll();
-      if (response.success) {
-        setDisasters(response.data);
-      } else {
-        console.error('Failed to fetch disasters:', response.error);
-        toast.error('Failed to load disasters');
-      }
-
-      if (connected) {
-        toast.success('Connected to real-time updates');
-      }
-    } catch (error) {
-      console.error('Failed to initialize app:', error);
-      toast.error('Failed to initialize application');
-    } finally {
-      setLoading(false);
-    }
-  }, [defaultUser, disasterApi, connected]);
-
+  // Effect for one-time application initialization
   useEffect(() => {
+    const initializeApp = async () => {
+      setLoading(true);
+      try {
+        setUser(defaultUser);
+
+        // Use the proper API method to fetch disasters
+        const response = await disasterApi.getAll();
+        if (response.success) {
+          setDisasters(response.data);
+        } else {
+          console.error('Failed to fetch disasters:', response.error);
+          toast.error('Failed to load initial disaster data.');
+        }
+
+        if (connected) {
+          toast.success('Connected to real-time updates');
+        }
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        toast.error('A critical error occurred on startup.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     initializeApp();
-  }, [initializeApp]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   useEffect(() => {
     if (!connected) return;
