@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -26,40 +26,41 @@ function App() {
   const { connected, emit } = useWebSocket();
   const { disasters: disasterApi } = useApi();
 
-  useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        const defaultUser = {
-          id: process.env.REACT_APP_DEFAULT_USER_ID || 'netrunnerX',
-          username: 'netrunnerX',
-          role: 'admin',
-          name: 'Emergency Coordinator'
-        };
+  // Memoize the default user to prevent unnecessary re-renders
+  const defaultUser = useMemo(() => ({
+    id: process.env.REACT_APP_DEFAULT_USER_ID || 'netrunnerX',
+    username: 'netrunnerX',
+    role: 'admin',
+    name: 'Emergency Coordinator'
+  }), []);
 
-        setUser(defaultUser);
+  const initializeApp = useCallback(async () => {
+    try {
+      setUser(defaultUser);
 
-        // Use the proper API method to fetch disasters
-        const response = await disasterApi.getAll();
-        if (response.success) {
-          setDisasters(response.data);
-        } else {
-          console.error('Failed to fetch disasters:', response.error);
-          toast.error('Failed to load disasters');
-        }
-
-        if (connected) {
-          toast.success('Connected to real-time updates');
-        }
-      } catch (error) {
-        console.error('Failed to initialize app:', error);
-        toast.error('Failed to initialize application');
-      } finally {
-        setLoading(false);
+      // Use the proper API method to fetch disasters
+      const response = await disasterApi.getAll();
+      if (response.success) {
+        setDisasters(response.data);
+      } else {
+        console.error('Failed to fetch disasters:', response.error);
+        toast.error('Failed to load disasters');
       }
-    };
 
+      if (connected) {
+        toast.success('Connected to real-time updates');
+      }
+    } catch (error) {
+      console.error('Failed to initialize app:', error);
+      toast.error('Failed to initialize application');
+    } finally {
+      setLoading(false);
+    }
+  }, [defaultUser, disasterApi, connected]);
+
+  useEffect(() => {
     initializeApp();
-  }, [connected, disasterApi]);
+  }, [initializeApp]);
 
   useEffect(() => {
     if (!connected) return;
@@ -105,18 +106,26 @@ function App() {
     };
   }, [connected]);
 
-  const handleDisasterCreated = (newDisaster) => {
+  const handleDisasterCreated = useCallback((newDisaster) => {
     setDisasters(prev => [newDisaster, ...prev]);
     setSelectedDisaster(newDisaster);
     toast.success('Disaster reported successfully');
-  };
+  }, []);
 
-  const handleDisasterSelect = (disaster) => {
+  const handleDisasterSelect = useCallback((disaster) => {
     setSelectedDisaster(disaster);
     if (connected && disaster?.id) {
       emit('join_disaster', disaster.id);
     }
-  };
+  }, [connected, emit]);
+
+  const handleMenuClick = useCallback(() => {
+    setSidebarOpen(prev => !prev);
+  }, []);
+
+  const handleSidebarClose = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
 
   if (loading) {
     return (
@@ -139,13 +148,13 @@ function App() {
       <Header
         user={user}
         connected={connected}
-        onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+        onMenuClick={handleMenuClick}
       />
       <div className="flex">
         <AnimatePresence>
           {sidebarOpen && (
             <Sidebar
-              onClose={() => setSidebarOpen(false)}
+              onClose={handleSidebarClose}
               selectedDisaster={selectedDisaster}
               onDisasterSelect={handleDisasterSelect}
             />

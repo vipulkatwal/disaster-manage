@@ -12,9 +12,25 @@ export const useWebSocket = () => {
 	const reconnectTimeoutRef = useRef(null);
 	const reconnectAttemptsRef = useRef(0);
 	const maxReconnectAttempts = 5;
+	const connectionAttemptsRef = useRef(0);
+	const lastConnectionAttemptRef = useRef(0);
 
 	const connect = useCallback(() => {
 		try {
+			// Rate limiting: prevent connection attempts more than once per 2 seconds
+			const now = Date.now();
+			if (now - lastConnectionAttemptRef.current < 2000) {
+				console.warn("WebSocket: Connection attempt throttled");
+				return;
+			}
+			lastConnectionAttemptRef.current = now;
+
+			// Prevent excessive connection attempts
+			if (connectionAttemptsRef.current > 10) {
+				console.warn("WebSocket: Too many connection attempts");
+				return;
+			}
+
 			if (socketRef.current?.connected) {
 				return;
 			}
@@ -23,6 +39,7 @@ export const useWebSocket = () => {
 				socketRef.current.disconnect();
 			}
 
+			connectionAttemptsRef.current++;
 			socketRef.current = io(WS_BASE_URL, {
 				transports: ["websocket", "polling"],
 				timeout: 10000,
@@ -36,6 +53,7 @@ export const useWebSocket = () => {
 				setConnected(true);
 				setError(null);
 				reconnectAttemptsRef.current = 0;
+				connectionAttemptsRef.current = 0;
 				window.socket = socketRef.current;
 			});
 
@@ -102,6 +120,7 @@ export const useWebSocket = () => {
 
 		setConnected(false);
 		setLastMessage(null);
+		connectionAttemptsRef.current = 0;
 	}, []);
 
 	const emit = useCallback(
