@@ -1,11 +1,10 @@
 import axios from "axios";
 
-const API_BASE_URL =
-	process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
 const DEFAULT_USER_ID = process.env.REACT_APP_DEFAULT_USER_ID || "netrunnerX";
 
 const api = axios.create({
-	baseURL: API_BASE_URL,
+	baseURL: `${API_BASE_URL}/api`,
 	timeout: 10000,
 	headers: {
 		"Content-Type": "application/json",
@@ -26,6 +25,7 @@ api.interceptors.request.use(
 			console.log(`📤 API Request [${config.headers["x-request-id"]}]:`, {
 				method: config.method?.toUpperCase(),
 				url: config.url,
+				baseURL: config.baseURL,
 				data: config.data,
 				params: config.params,
 			});
@@ -56,16 +56,16 @@ api.interceptors.response.use(
 	(error) => {
 		const requestId = error.config?.headers?.["x-request-id"];
 
-		if (process.env.REACT_APP_DEBUG_MODE === "true") {
-			console.error(`❌ API Error [${requestId}]:`, {
-				message: error.message,
-				status: error.response?.status,
-				statusText: error.response?.statusText,
-				data: error.response?.data,
-				url: error.config?.url,
-				method: error.config?.method?.toUpperCase(),
-			});
-		}
+		// Always log API errors for debugging
+		console.error(`❌ API Error [${requestId}]:`, {
+			message: error.message,
+			status: error.response?.status,
+			statusText: error.response?.statusText,
+			data: error.response?.data,
+			url: error.config?.url,
+			baseURL: error.config?.baseURL,
+			method: error.config?.method?.toUpperCase(),
+		});
 
 		if (error.response) {
 			const { status, data } = error.response;

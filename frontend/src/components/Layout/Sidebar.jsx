@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  X,
-  Home,
-  AlertTriangle,
-  Map,
-  Plus,
+import { 
+  X, 
+  Home, 
+  AlertTriangle, 
+  Map, 
+  Plus, 
   Search,
   Filter,
   Clock,
@@ -48,23 +48,23 @@ const Sidebar = ({ onClose, selectedDisaster, onDisasterSelect }) => {
   const filteredDisasters = recentDisasters.filter(disaster => {
     const matchesSearch = disaster.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          disaster.location_name?.toLowerCase().includes(searchQuery.toLowerCase());
-
-    const matchesFilter = activeFilter === 'all' ||
+    
+    const matchesFilter = activeFilter === 'all' || 
                          disaster.tags?.includes(activeFilter) ||
                          (activeFilter === 'urgent' && disaster.tags?.includes('urgent'));
-
+    
     return matchesSearch && matchesFilter;
   });
 
   const sidebarVariants = {
     hidden: { x: -300, opacity: 0 },
-    visible: {
-      x: 0,
+    visible: { 
+      x: 0, 
       opacity: 1,
       transition: { type: 'spring', damping: 20, stiffness: 300 }
     },
-    exit: {
-      x: -300,
+    exit: { 
+      x: -300, 
       opacity: 0,
       transition: { duration: 0.2 }
     }
@@ -265,7 +265,7 @@ const Sidebar = ({ onClose, selectedDisaster, onDisasterSelect }) => {
             <div className="text-center py-8">
               <AlertTriangle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500 text-sm">
-                {searchQuery || activeFilter !== 'all'
+                {searchQuery || activeFilter !== 'all' 
                   ? 'No disasters match your search'
                   : 'No recent disasters found'
                 }

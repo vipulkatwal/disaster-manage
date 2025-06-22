@@ -24,7 +24,7 @@ function App() {
   const [selectedDisaster, setSelectedDisaster] = useState(null);
 
   const { connected, emit } = useWebSocket();
-  const { request } = useApi();
+  const { disasters: disasterApi } = useApi();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -35,14 +35,18 @@ function App() {
           role: 'admin',
           name: 'Emergency Coordinator'
         };
-        
+
         setUser(defaultUser);
-        
-        const response = await request('get', '/disasters');
+
+        // Use the proper API method to fetch disasters
+        const response = await disasterApi.getAll();
         if (response.success) {
           setDisasters(response.data);
+        } else {
+          console.error('Failed to fetch disasters:', response.error);
+          toast.error('Failed to load disasters');
         }
-        
+
         if (connected) {
           toast.success('Connected to real-time updates');
         }
@@ -55,7 +59,7 @@ function App() {
     };
 
     initializeApp();
-  }, [connected, request]);
+  }, [connected, disasterApi]);
 
   useEffect(() => {
     if (!connected) return;
@@ -66,8 +70,8 @@ function App() {
     };
 
     const handleDisasterUpdated = (data) => {
-      setDisasters(prev => 
-        prev.map(disaster => 
+      setDisasters(prev =>
+        prev.map(disaster =>
           disaster.id === data.id ? data : disaster
         )
       );
@@ -75,7 +79,7 @@ function App() {
     };
 
     const handleDisasterDeleted = (data) => {
-      setDisasters(prev => 
+      setDisasters(prev =>
         prev.filter(disaster => disaster.id !== data.id)
       );
       toast.success('Disaster record deleted');
@@ -132,7 +136,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
+      <Header
         user={user}
         connected={connected}
         onMenuClick={() => setSidebarOpen(!sidebarOpen)}
@@ -140,7 +144,7 @@ function App() {
       <div className="flex">
         <AnimatePresence>
           {sidebarOpen && (
-            <Sidebar 
+            <Sidebar
               onClose={() => setSidebarOpen(false)}
               selectedDisaster={selectedDisaster}
               onDisasterSelect={handleDisasterSelect}
@@ -149,62 +153,62 @@ function App() {
         </AnimatePresence>
         <main className="flex-1 p-6">
           <Routes>
-            <Route 
-              path="/" 
+            <Route
+              path="/"
               element={
-                <Dashboard 
+                <Dashboard
                   disasters={disasters}
                   selectedDisaster={selectedDisaster}
                   onDisasterSelect={handleDisasterSelect}
                   user={user}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/disasters" 
+            <Route
+              path="/disasters"
               element={
-                <DisasterList 
+                <DisasterList
                   disasters={disasters}
                   onDisasterSelect={handleDisasterSelect}
                   selectedDisaster={selectedDisaster}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/disasters/new" 
+            <Route
+              path="/disasters/new"
               element={
-                <DisasterForm 
+                <DisasterForm
                   onDisasterCreated={handleDisasterCreated}
                   user={user}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/disasters/:id/report" 
+            <Route
+              path="/disasters/:id/report"
               element={
-                <ReportForm 
+                <ReportForm
                   disaster={selectedDisaster}
                   user={user}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/map" 
+            <Route
+              path="/map"
               element={
-                <ResourceMap 
+                <ResourceMap
                   disasters={disasters}
                   selectedDisaster={selectedDisaster}
                   onDisasterSelect={handleDisasterSelect}
                 />
-              } 
+              }
             />
-            <Route 
-              path="/social-media" 
-              element={<SocialMediaPage />} 
+            <Route
+              path="/social-media"
+              element={<SocialMediaPage />}
             />
-            <Route 
-              path="/browse" 
-              element={<BrowsePage />} 
+            <Route
+              path="/browse"
+              element={<BrowsePage />}
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

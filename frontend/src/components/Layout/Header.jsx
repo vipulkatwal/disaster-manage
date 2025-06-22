@@ -1,12 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  Menu,
-  Bell,
-  Shield,
-  Wifi,
-  WifiOff,
+import { 
+  Menu, 
+  Bell, 
+  Shield, 
+  Wifi, 
+  WifiOff, 
   User,
   AlertTriangle,
   MessageCircle,
@@ -64,7 +64,7 @@ const Header = ({ user, connected, onMenuClick }) => {
                 </div>
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white animate-pulse"></div>
               </div>
-
+              
               <div className="hidden sm:block min-w-0">
                 <h1 className="text-lg font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent whitespace-nowrap">
                   Emergency Response
@@ -105,8 +105,8 @@ const Header = ({ user, connected, onMenuClick }) => {
           <div className="flex items-center space-x-2 sm:space-x-3">
             {/* Connection Status */}
             <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
-              connected
-                ? 'bg-green-100 text-green-800'
+              connected 
+                ? 'bg-green-100 text-green-800' 
                 : 'bg-red-100 text-red-800'
             }`}>
               {connected ? (

@@ -38,3 +38,5 @@ services:
         value: https://disaster-manage-backend.onrender.com
       - key: REACT_APP_WS_URL
         value: wss://disaster-manage-backend.onrender.com
+      - key: REACT_APP_DEFAULT_USER_ID
+        value: netrunnerX

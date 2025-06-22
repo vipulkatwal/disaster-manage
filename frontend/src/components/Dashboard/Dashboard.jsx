@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import {
-  AlertTriangle,
-  MapPin,
-  Clock,
-  Users,
+import { 
+  AlertTriangle, 
+  MapPin, 
+  Clock, 
+  Users, 
   TrendingUp,
   Activity,
   Shield,
@@ -45,11 +45,11 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
   const loadDashboardData = async () => {
     try {
       setRefreshing(true);
-
-      const urgentCount = disasters.filter(d =>
+      
+      const urgentCount = disasters.filter(d => 
         d.tags?.includes('urgent') || d.tags?.includes('critical')
       ).length;
-
+      
       setStats({
         totalDisasters: disasters.length,
         urgentDisasters: urgentCount,
@@ -63,10 +63,10 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
         title: disaster.title,
         location: disaster.location_name,
         timestamp: disaster.created_at,
-        priority: disaster.tags?.includes('urgent') ? 'high' :
+        priority: disaster.tags?.includes('urgent') ? 'high' : 
                  disaster.tags?.includes('medium') ? 'medium' : 'low'
       }));
-
+      
       setRecentActivity(activity);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -202,7 +202,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
             Here's what's happening with emergency response today
           </p>
         </div>
-
+        
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <button
             onClick={loadDashboardData}
@@ -212,7 +212,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
-
+          
           <Link
             to="/disasters/new"
             className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105"
@@ -268,7 +268,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
               </Link>
             </div>
           </div>
-
+          
           <div className="p-6">
             {recentActivity.length > 0 ? (
               <div className="space-y-4">
@@ -360,7 +360,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   <span className="text-sm text-green-600">Operational</span>
                 </div>
               </div>
-
+              
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Real-time Updates</span>
                 <div className="flex items-center space-x-2">
@@ -368,7 +368,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   <span className="text-sm text-green-600">Active</span>
                 </div>
               </div>
-
+              
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">External APIs</span>
                 <div className="flex items-center space-x-2">
@@ -376,7 +376,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   <span className="text-sm text-yellow-600">Degraded</span>
                 </div>
               </div>
-
+              
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700">Database</span>
                 <div className="flex items-center space-x-2">
@@ -426,9 +426,9 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   <span>{showSocialMedia ? 'Hide' : 'Show'}</span>
                 </button>
               </div>
-
+              
               {showSocialMedia ? (
-                <SocialMediaFeed
+                <SocialMediaFeed 
                   disasterId={selectedDisaster.id}
                   keywords={selectedDisaster.tags?.join(',')}
                 />
@@ -457,9 +457,9 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   <span>{showOfficialUpdates ? 'Hide' : 'Show'}</span>
                 </button>
               </div>
-
+              
               {showOfficialUpdates ? (
-                <OfficialUpdates
+                <OfficialUpdates 
                   disasterId={selectedDisaster.id}
                 />
               ) : (
@@ -488,7 +488,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
               </Link>
             </div>
           </div>
-
+          
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50">
@@ -541,13 +541,13 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        disaster.tags?.includes('urgent')
+                        disaster.tags?.includes('urgent') 
                           ? 'bg-red-100 text-red-800'
                           : disaster.tags?.includes('high')
                           ? 'bg-orange-100 text-orange-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {disaster.tags?.includes('urgent') ? 'Urgent' :
+                        {disaster.tags?.includes('urgent') ? 'Urgent' : 
                          disaster.tags?.includes('high') ? 'High' : 'Medium'}
                       </span>
                     </td>

@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 import toast from "react-hot-toast";
 
-const WS_BASE_URL = process.env.REACT_APP_WS_URL || "http://localhost:5000";
+const WS_BASE_URL = process.env.REACT_APP_WS_URL || "ws://localhost:5000";
 
 export const useWebSocket = () => {
-	const [isConnected, setIsConnected] = useState(false);
+	const [connected, setConnected] = useState(false);
+	const [error, setError] = useState(null);
 	const [lastMessage, setLastMessage] = useState(null);
 	const socketRef = useRef(null);
 	const reconnectTimeoutRef = useRef(null);
@@ -14,227 +15,121 @@ export const useWebSocket = () => {
 
 	const connect = useCallback(() => {
 		try {
+			if (socketRef.current?.connected) {
+				return;
+			}
+
 			if (socketRef.current) {
 				socketRef.current.disconnect();
 			}
 
 			socketRef.current = io(WS_BASE_URL, {
 				transports: ["websocket", "polling"],
-				timeout: 20000,
+				timeout: 10000,
 				reconnection: true,
 				reconnectionAttempts: maxReconnectAttempts,
 				reconnectionDelay: 1000,
 			});
 
-			window.socket = socketRef.current;
-
 			socketRef.current.on("connect", () => {
-				setIsConnected(true);
+				console.log("🔌 WebSocket connected");
+				setConnected(true);
+				setError(null);
 				reconnectAttemptsRef.current = 0;
-
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log("✅ WebSocket connected");
-				}
+				window.socket = socketRef.current;
 			});
 
-			socketRef.current.on("connect_error", (err) => {
-				setIsConnected(false);
-
-				console.error("❌ WebSocket connection error:", err);
-
+			socketRef.current.on("connect_error", (error) => {
+				console.error("🔌 WebSocket connection error:", error);
+				setError(error.message);
+				setConnected(false);
 				reconnectAttemptsRef.current += 1;
 
-				if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
-					toast.error("Failed to connect to real-time services");
+				if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+					reconnectTimeoutRef.current = setTimeout(() => {
+						connect();
+					}, 2000);
 				}
 			});
 
 			socketRef.current.on("disconnect", (reason) => {
-				setIsConnected(false);
-
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log("🔌 WebSocket disconnected:", reason);
-				}
-
-				if (reason === "io server disconnect" || reason === "transport close") {
-					if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-						reconnectTimeoutRef.current = setTimeout(() => {
-							connect();
-						}, 2000);
-					}
+				console.log("🔌 WebSocket disconnected:", reason);
+				setConnected(false);
+				if (reason === "io server disconnect") {
+					socketRef.current.connect();
 				}
 			});
 
-			socketRef.current.on("reconnect_attempt", (attempt) => {
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`🔄 Reconnection attempt ${attempt}`);
-				}
-			});
-
-			socketRef.current.on("reconnect", (attempt) => {
-				setIsConnected(true);
+			socketRef.current.on("reconnect", (attemptNumber) => {
+				console.log(
+					"🔌 WebSocket reconnected after",
+					attemptNumber,
+					"attempts"
+				);
+				setConnected(true);
+				setError(null);
 				toast.success("Reconnected to real-time services");
-
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`✅ Reconnected after ${attempt} attempts`);
-				}
 			});
 
-			socketRef.current.on("reconnect_failed", () => {
-				setIsConnected(false);
-				toast.error("Unable to reconnect to real-time services");
-				console.error("❌ Failed to reconnect after maximum attempts");
+			socketRef.current.on("reconnect_error", (error) => {
+				console.error("🔌 WebSocket reconnection error:", error);
+				setError(error.message);
 			});
 
-			// Message handlers
-			socketRef.current.on("disaster_update", (data) => {
-				console.log("📡 Received disaster update:", data);
-				setLastMessage({ type: "disaster_update", data });
+			socketRef.current.on("message", (data) => {
+				setLastMessage(data);
 			});
 
-			socketRef.current.on("priority_alert", (data) => {
-				console.log("🚨 Received priority alert:", data);
-				setLastMessage({ type: "priority_alert", data });
-			});
-
-			socketRef.current.on("social_media_update", (data) => {
-				console.log("📱 Received social media update:", data);
-				setLastMessage({ type: "social_media_update", data });
-			});
-
-			socketRef.current.on("official_update", (data) => {
-				console.log("📢 Received official update:", data);
-				setLastMessage({ type: "official_update", data });
+			socketRef.current.on("error", (error) => {
+				console.error("🔌 WebSocket error:", error);
+				setError(error.message);
 			});
 		} catch (err) {
 			console.error("Error creating WebSocket connection:", err);
-			setIsConnected(false);
+			setConnected(false);
 		}
 	}, []);
 
 	const disconnect = useCallback(() => {
-		if (socketRef.current) {
-			socketRef.current.disconnect();
-			socketRef.current = null;
-			window.socket = null;
-		}
-
 		if (reconnectTimeoutRef.current) {
 			clearTimeout(reconnectTimeoutRef.current);
 		}
 
-		setIsConnected(false);
+		if (socketRef.current) {
+			socketRef.current.disconnect();
+			socketRef.current = null;
+		}
+
+		setConnected(false);
 		setLastMessage(null);
 	}, []);
 
 	const emit = useCallback(
 		(event, data) => {
-			if (socketRef.current && isConnected) {
+			if (socketRef.current && connected) {
 				socketRef.current.emit(event, data);
-
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`📤 Emitted ${event}:`, data);
-				}
-
 				return true;
 			} else {
-				console.warn(`Cannot emit ${event}: socket not connected`);
+				console.warn("WebSocket not connected, cannot emit:", event);
 				return false;
 			}
 		},
-		[isConnected]
+		[connected]
 	);
 
 	const on = useCallback((event, callback) => {
 		if (socketRef.current) {
 			socketRef.current.on(event, callback);
-
-			if (process.env.REACT_APP_DEBUG_MODE === "true") {
-				console.log(`👂 Listening for ${event}`);
-			}
 		}
 	}, []);
 
 	const off = useCallback((event, callback) => {
 		if (socketRef.current) {
 			socketRef.current.off(event, callback);
-
-			if (process.env.REACT_APP_DEBUG_MODE === "true") {
-				console.log(`🔇 Stopped listening for ${event}`);
-			}
 		}
 	}, []);
 
-	const joinRoom = useCallback(
-		(room) => {
-			if (emit("join_room", room)) {
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`🏠 Joined room: ${room}`);
-				}
-			}
-		},
-		[emit]
-	);
-
-	const leaveRoom = useCallback(
-		(room) => {
-			if (emit("leave_room", room)) {
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`🚪 Left room: ${room}`);
-				}
-			}
-		},
-		[emit]
-	);
-
-	const joinDisaster = useCallback(
-		(disasterId) => {
-			if (emit("join_disaster", disasterId)) {
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`🌪️ Joined disaster room: ${disasterId}`);
-				}
-			}
-		},
-		[emit]
-	);
-
-	const leaveDisaster = useCallback(
-		(disasterId) => {
-			if (emit("leave_disaster", disasterId)) {
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`🌪️ Left disaster room: ${disasterId}`);
-				}
-			}
-		},
-		[emit]
-	);
-
-	const joinLocation = useCallback(
-		(lat, lng, radius = 10) => {
-			const locationData = { lat, lng, radius };
-			if (emit("join_location", locationData)) {
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log(`📍 Joined location room: ${lat}, ${lng} (${radius}km)`);
-				}
-			}
-		},
-		[emit]
-	);
-
-	const sendEmergencyAlert = useCallback(
-		(message, location, priority = "urgent") => {
-			const alertData = { message, location, priority };
-			if (emit("emergency_alert", alertData)) {
-				toast.success("Emergency alert sent");
-				return true;
-			} else {
-				toast.error("Failed to send emergency alert");
-				return false;
-			}
-		},
-		[emit]
-	);
-
+	// Auto-connect on mount
 	useEffect(() => {
 		connect();
 
@@ -243,19 +138,18 @@ export const useWebSocket = () => {
 		};
 	}, [connect, disconnect]);
 
+	// Handle page visibility changes
 	useEffect(() => {
 		const handleVisibilityChange = () => {
 			if (document.hidden) {
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log("🙈 Page hidden, maintaining connection");
+				// Page is hidden, disconnect to save resources
+				if (socketRef.current?.connected) {
+					socketRef.current.disconnect();
 				}
 			} else {
-				if (!isConnected && socketRef.current?.disconnected) {
+				// Page is visible, reconnect if needed
+				if (!connected && socketRef.current?.disconnected) {
 					connect();
-				}
-
-				if (process.env.REACT_APP_DEBUG_MODE === "true") {
-					console.log("👀 Page visible, checking connection");
 				}
 			}
 		};
@@ -265,18 +159,17 @@ export const useWebSocket = () => {
 		return () => {
 			document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
-	}, [isConnected, connect]);
+	}, [connected, connect]);
 
 	useEffect(() => {
 		const handleOnline = () => {
-			if (!isConnected) {
+			if (!connected) {
 				connect();
 			}
-			toast.success("Back online");
 		};
 
 		const handleOffline = () => {
-			toast.error("Connection lost");
+			setConnected(false);
 		};
 
 		window.addEventListener("online", handleOnline);
@@ -286,22 +179,17 @@ export const useWebSocket = () => {
 			window.removeEventListener("online", handleOnline);
 			window.removeEventListener("offline", handleOffline);
 		};
-	}, [isConnected, connect]);
+	}, [connected, connect]);
 
 	return {
-		isConnected,
+		connected,
+		error,
 		lastMessage,
 		connect,
 		disconnect,
 		emit,
 		on,
 		off,
-		joinRoom,
-		leaveRoom,
-		joinDisaster,
-		leaveDisaster,
-		joinLocation,
-		sendEmergencyAlert,
 		socket: socketRef.current,
 	};
 };
