@@ -5,212 +5,72 @@ const logger = require("../utils/logger");
 
 const mockOfficialUpdates = [
 	{
-		id: "1",
-		source: "NDMA",
+		id: "fema-1",
+		source: "FEMA",
 		title: "Emergency Shelter Locations Updated",
 		content:
-			"New emergency shelters have been opened in Mumbai and Delhi. Capacity for 500+ people available.",
-		url: "https://ndma.gov.in/disaster-updates",
+			"New emergency shelters have been opened in Manhattan and Brooklyn.",
+		url: "https://www.fema.gov/disaster-updates",
 		published_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
 		severity: "high",
 		category: "shelter",
-		contact: "011-26701728",
 	},
 	{
-		id: "2",
-		source: "Mumbai Municipal Corporation",
-		title: "Water Distribution Points Active",
-		content:
-			"Water distribution is now active at Bandra Kurla Complex and Andheri locations from 8 AM to 6 PM.",
-		url: "https://mcgm.gov.in/emergency",
-		published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-		severity: "medium",
-		category: "supplies",
-		contact: "022-24937746",
-	},
-	{
-		id: "3",
-		source: "Indian Red Cross Society",
+		id: "redcross-1",
+		source: "American Red Cross",
 		title: "Volunteer Registration Open",
 		content:
-			"Indian Red Cross Society is accepting volunteer registrations for disaster relief efforts. Training provided.",
-		url: "https://indianredcross.org/volunteer",
+			"The Red Cross is accepting volunteer registrations for disaster relief efforts.",
+		url: "https://www.redcross.org/volunteer",
 		published_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
 		severity: "low",
 		category: "volunteer",
-		contact: "011-23716441",
 	},
 	{
-		id: "4",
-		source: "IMD",
-		title: "Cyclone Alert Extended",
+		id: "nyc-1",
+		source: "NYC Emergency Management",
+		title: "Water Distribution Points Active",
 		content:
-			"Cyclone conditions expected to continue through tomorrow evening. Stay indoors in coastal areas.",
-		url: "https://mausam.imd.gov.in/alerts",
+			"Water distribution is now active at Central Park and Prospect Park locations.",
+		url: "https://www.nyc.gov/site/em/index.page",
+		published_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+		severity: "medium",
+		category: "supplies",
+	},
+	{
+		id: "weather-1",
+		source: "National Weather Service",
+		title: "Flash Flood Warning Issued",
+		content:
+			"A flash flood warning is in effect for the tri-state area until 8 PM.",
+		url: "https://www.weather.gov/alerts",
 		published_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
 		severity: "high",
 		category: "weather",
-		contact: "011-24631913",
-	},
-	{
-		id: "5",
-		source: "Delhi Disaster Management Authority",
-		title: "Mobile Food Units Deployed",
-		content:
-			"Mobile food units are serving hot meals in affected areas. Check locations on our website.",
-		url: "https://ddma.delhi.gov.in/disaster-relief",
-		published_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-		severity: "medium",
-		category: "food",
-		contact: "011-23469000",
-	},
-	{
-		id: "6",
-		source: "Karnataka State Disaster Management Authority",
-		title: "Earthquake Response Team Activated",
-		content:
-			"Earthquake response teams have been activated in Bangalore. Emergency helpline numbers updated.",
-		url: "https://ksdma.karnataka.gov.in/earthquake-response",
-		published_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
-		severity: "high",
-		category: "emergency",
-		contact: "080-22221188",
-	},
-	{
-		id: "7",
-		source: "Tamil Nadu State Disaster Management Authority",
-		title: "Coastal Evacuation Orders",
-		content:
-			"Evacuation orders issued for coastal areas in Chennai. Emergency shelters opened at Marina Beach.",
-		url: "https://tnsdma.tn.gov.in/cyclone-alert",
-		published_at: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-		severity: "urgent",
-		category: "evacuation",
-		contact: "044-28520100",
-	},
-	{
-		id: "8",
-		source: "Himachal Pradesh Disaster Management Authority",
-		title: "Landslide Response Team Deployed",
-		content:
-			"Landslide response teams deployed to Shimla-Kalka highway. Traffic diversions in place.",
-		url: "https://hpsdma.hp.gov.in/landslide-response",
-		published_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-		severity: "urgent",
-		category: "rescue",
-		contact: "0177-2658000",
 	},
 ];
 
-const scrapeNDMAUpdates = async () => {
+const scrapeFEMAUpdates = async () => {
 	try {
-		logger.warn("NDMA scraping not implemented, using mock data");
-		return mockOfficialUpdates.filter((update) => update.source === "NDMA");
+		logger.warn("FEMA scraping not implemented, using mock data");
+		return mockOfficialUpdates.filter((update) => update.source === "FEMA");
 	} catch (error) {
-		logger.error("Error scraping NDMA updates:", error.message);
-		return mockOfficialUpdates.filter((update) => update.source === "NDMA");
+		logger.error("Error scraping FEMA updates:", error.message);
+		return mockOfficialUpdates.filter((update) => update.source === "FEMA");
 	}
 };
 
 const scrapeRedCrossUpdates = async () => {
 	try {
-		logger.warn("Indian Red Cross scraping not implemented, using mock data");
+		logger.warn("Red Cross scraping not implemented, using mock data");
 		return mockOfficialUpdates.filter(
-			(update) => update.source === "Indian Red Cross Society"
+			(update) => update.source === "American Red Cross"
 		);
 	} catch (error) {
-		logger.error("Error scraping Indian Red Cross updates:", error.message);
+		logger.error("Error scraping Red Cross updates:", error.message);
 		return mockOfficialUpdates.filter(
-			(update) => update.source === "Indian Red Cross Society"
+			(update) => update.source === "American Red Cross"
 		);
-	}
-};
-
-const scrapeMumbaiMunicipalUpdates = async () => {
-	try {
-		logger.warn("Mumbai Municipal scraping not implemented, using mock data");
-		return mockOfficialUpdates.filter(
-			(update) => update.source === "Mumbai Municipal Corporation"
-		);
-	} catch (error) {
-		logger.error("Error scraping Mumbai Municipal updates:", error.message);
-		return mockOfficialUpdates.filter(
-			(update) => update.source === "Mumbai Municipal Corporation"
-		);
-	}
-};
-
-const scrapeIMDUpdates = async () => {
-	try {
-		logger.warn("IMD scraping not implemented, using mock data");
-		return mockOfficialUpdates.filter((update) => update.source === "IMD");
-	} catch (error) {
-		logger.error("Error scraping IMD updates:", error.message);
-		return mockOfficialUpdates.filter((update) => update.source === "IMD");
-	}
-};
-
-const scrapeFEMAUpdates = async () => {
-	try {
-		const cacheKey = "fema_updates";
-		const cachedResult = await getCachedData(cacheKey);
-		if (cachedResult) {
-			logger.info("FEMA updates served from cache");
-			return cachedResult;
-		}
-
-		const response = await axios.get("https://www.fema.gov/disaster-updates", {
-			timeout: 15000,
-			headers: {
-				"User-Agent": "Mozilla/5.0 (compatible; DisasterResponseBot/1.0)",
-			},
-		});
-
-		const $ = cheerio.load(response.data);
-		const updates = [];
-
-		// FEMA specific selectors
-		$(".disaster-update, .alert, .news-item").each((index, element) => {
-			const title = $(element).find("h2, h3, .title").text().trim();
-			const content = $(element)
-				.find(".content, .description, p")
-				.text()
-				.trim();
-			const link = $(element).find("a").attr("href");
-			const date = $(element).find(".date, time").text().trim();
-
-			if (title && content) {
-				updates.push({
-					id: `fema_${Date.now()}_${index}`,
-					source: "FEMA",
-					title: title.substring(0, 200),
-					content: content.substring(0, 500),
-					url: link
-						? link.startsWith("http")
-							? link
-							: `https://www.fema.gov${link}`
-						: "https://www.fema.gov/disaster-updates",
-					published_at: date
-						? new Date(date).toISOString()
-						: new Date().toISOString(),
-					severity: determineSeverity(title + " " + content),
-					category: determineCategory(title + " " + content),
-					contact: "1-800-621-3362",
-				});
-			}
-		});
-
-		if (updates.length === 0) {
-			logger.warn("No FEMA updates scraped, using mock data");
-			return mockOfficialUpdates.filter((update) => update.source === "FEMA");
-		}
-
-		await setCachedData(cacheKey, updates, 60 * 60 * 1000); // 1 hour cache
-		logger.info(`FEMA scraping: Found ${updates.length} updates`);
-		return updates;
-	} catch (error) {
-		logger.error("Error scraping FEMA updates:", error.message);
-		return mockOfficialUpdates.filter((update) => update.source === "FEMA");
 	}
 };
 
@@ -221,7 +81,7 @@ const scrapeNYCEmergencyUpdates = async () => {
 			(update) => update.source === "NYC Emergency Management"
 		);
 	} catch (error) {
-		logger.error("Error scraping NYC Emergency updates:", error);
+		logger.error("Error scraping NYC Emergency updates:", error.message);
 		return mockOfficialUpdates.filter(
 			(update) => update.source === "NYC Emergency Management"
 		);
@@ -235,153 +95,96 @@ const scrapeWeatherServiceUpdates = async () => {
 			(update) => update.source === "National Weather Service"
 		);
 	} catch (error) {
-		logger.error("Error scraping Weather Service updates:", error);
+		logger.error("Error scraping Weather Service updates:", error.message);
 		return mockOfficialUpdates.filter(
 			(update) => update.source === "National Weather Service"
 		);
 	}
 };
 
-const scrapeGenericSite = async (url, selectors) => {
-	try {
-		const response = await axios.get(url, {
-			timeout: 10000,
-			headers: {
-				"User-Agent": "Mozilla/5.0 (compatible; DisasterResponseBot/1.0)",
-			},
-		});
-
-		const $ = cheerio.load(response.data);
-		const updates = [];
-
-		$(selectors.container).each((index, element) => {
-			const title = $(element).find(selectors.title).text().trim();
-			const content = $(element).find(selectors.content).text().trim();
-			const link = $(element).find(selectors.link).attr("href");
-			const date = $(element).find(selectors.date).text().trim();
-
-			if (title && content) {
-				updates.push({
-					id: `generic_${Date.now()}_${index}`,
-					source: new URL(url).hostname,
-					title,
-					content: content.substring(0, 500),
-					url: link
-						? link.startsWith("http")
-							? link
-							: `${new URL(url).origin}${link}`
-						: url,
-					published_at: date
-						? new Date(date).toISOString()
-						: new Date().toISOString(),
-					severity: "medium",
-					category: "official",
-				});
-			}
-		});
-
-		return updates;
-	} catch (error) {
-		logger.error(`Error scraping ${url}:`, error);
-		return [];
-	}
-};
-
 const fetchOfficialUpdates = async (sources = ["all"]) => {
 	try {
-		const allUpdates = [];
-
-		const shouldScrapeAll = sources.includes("all");
-
-		if (shouldScrapeAll || sources.includes("fema")) {
-			const femaUpdates = await scrapeFEMAUpdates();
-			allUpdates.push(...femaUpdates);
-		}
-
-		if (shouldScrapeAll || sources.includes("redcross")) {
-			const redCrossUpdates = await scrapeRedCrossUpdates();
-			allUpdates.push(...redCrossUpdates);
-		}
-
-		if (shouldScrapeAll || sources.includes("nyc")) {
-			const nycUpdates = await scrapeNYCEmergencyUpdates();
-			allUpdates.push(...nycUpdates);
-		}
-
-		if (shouldScrapeAll || sources.includes("weather")) {
-			const weatherUpdates = await scrapeWeatherServiceUpdates();
-			allUpdates.push(...weatherUpdates);
-		}
-
-		if (allUpdates.length === 0) {
-			logger.info("No official updates scraped, using mock data");
+		if (sources.includes("all")) {
 			return mockOfficialUpdates;
 		}
-
-		const sortedUpdates = allUpdates.sort((a, b) => {
-			const severityOrder = { high: 3, medium: 2, low: 1 };
-			const severityDiff =
-				severityOrder[b.severity] - severityOrder[a.severity];
-
-			if (severityDiff !== 0) return severityDiff;
-
-			return new Date(b.published_at) - new Date(a.published_at);
-		});
-
-		logger.info(`Fetched ${sortedUpdates.length} official updates`);
-		return sortedUpdates;
+		return mockOfficialUpdates.filter((update) =>
+			sources.includes(update.source)
+		);
 	} catch (error) {
 		logger.error("Error fetching official updates:", error);
 		return mockOfficialUpdates;
 	}
 };
 
-const filterOfficialUpdates = (updates, category = null, severity = null) => {
-	let filtered = [...updates];
-
-	if (category) {
-		filtered = filtered.filter(
-			(update) =>
-				update.category &&
-				update.category.toLowerCase() === category.toLowerCase()
-		);
-	}
-
-	if (severity) {
-		filtered = filtered.filter(
-			(update) =>
-				update.severity &&
-				update.severity.toLowerCase() === severity.toLowerCase()
-		);
-	}
-
-	return filtered;
+const filterOfficialUpdates = (updates, { category }) => {
+	return updates.filter((update) => update.category === category);
 };
 
-const searchOfficialUpdates = (updates, keywords) => {
-	if (!keywords) return updates;
+const OFFICIAL_SOURCES = [
+	{
+		id: "fema",
+		name: "FEMA",
+		description: "Federal Emergency Management Agency",
+		url: "https://www.fema.gov/disaster-updates",
+		categories: ["shelter", "official", "federal"],
+		active: true,
+	},
+	{
+		id: "redcross",
+		name: "American Red Cross",
+		description: "Humanitarian organization providing emergency assistance",
+		url: "https://www.redcross.org/get-help/disaster-relief-and-recovery-services.html",
+		categories: ["volunteer", "shelter", "supplies"],
+		active: true,
+	},
+	{
+		id: "nyc",
+		name: "NYC Emergency Management",
+		description: "New York City's emergency management agency",
+		url: "https://www.nyc.gov/site/em/index.page",
+		categories: ["local", "supplies", "official"],
+		active: true,
+	},
+	{
+		id: "weather",
+		name: "National Weather Service",
+		description: "Weather forecasts and warnings",
+		url: "https://www.weather.gov/alerts",
+		categories: ["weather", "alerts", "federal"],
+		active: true,
+	},
+];
 
-	const keywordArray = keywords
-		.toLowerCase()
-		.split(",")
-		.map((k) => k.trim());
+const getAvailableSources = () => {
+	return OFFICIAL_SOURCES;
+};
 
-	return updates.filter((update) => {
-		const searchText = `${update.title} ${update.content}`.toLowerCase();
-		return keywordArray.some((keyword) => searchText.includes(keyword));
-	});
+const determineSeverity = (text) => {
+	const lowerText = text.toLowerCase();
+	if (
+		lowerText.includes("urgent") ||
+		lowerText.includes("immediate") ||
+		lowerText.includes("warning")
+	) {
+		return "high";
+	}
+	if (
+		lowerText.includes("advisory") ||
+		lowerText.includes("update") ||
+		lowerText.includes("watch")
+	) {
+		return "medium";
+	}
+	return "low";
 };
 
 module.exports = {
 	fetchOfficialUpdates,
 	filterOfficialUpdates,
-	searchOfficialUpdates,
 	scrapeFEMAUpdates,
 	scrapeRedCrossUpdates,
 	scrapeNYCEmergencyUpdates,
 	scrapeWeatherServiceUpdates,
-	scrapeGenericSite,
-	scrapeNDMAUpdates,
-	scrapeMumbaiMunicipalUpdates,
-	scrapeIMDUpdates,
+	getAvailableSources,
+	determineSeverity,
 };
