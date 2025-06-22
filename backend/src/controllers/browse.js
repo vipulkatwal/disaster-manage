@@ -83,9 +83,50 @@ const searchAllUpdates = async (req, res) => {
 	}
 };
 
+const searchOfficialUpdates = async (req, res) => {
+	const { q, sources, category, severity, limit = 50, offset = 0 } = req.query;
+	try {
+		let updates = await browseService.fetchOfficialUpdates(
+			sources ? sources.split(",") : ["all"]
+		);
+
+		if (q) {
+			const keywords = q.toLowerCase();
+			updates = updates.filter(
+				(update) =>
+					update.title.toLowerCase().includes(keywords) ||
+					update.content.toLowerCase().includes(keywords) ||
+					update.source.toLowerCase().includes(keywords)
+			);
+		}
+
+		if (category) {
+			updates = updates.filter((update) => update.category === category);
+		}
+
+		if (severity) {
+			updates = updates.filter((update) => update.severity === severity);
+		}
+
+		const paginatedUpdates = updates.slice(
+			parseInt(offset),
+			parseInt(offset) + parseInt(limit)
+		);
+
+		res.json({
+			results: paginatedUpdates,
+			count: updates.length,
+		});
+	} catch (error) {
+		logger.error("Error in searchOfficialUpdates controller:", error);
+		res.status(500).json({ error: "Failed to search official updates." });
+	}
+};
+
 module.exports = {
 	getOfficialUpdates,
 	getAvailableSources,
 	getUpdatesByCategory,
 	searchAllUpdates,
+	searchOfficialUpdates,
 };
