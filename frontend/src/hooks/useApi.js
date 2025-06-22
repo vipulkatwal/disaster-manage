@@ -10,9 +10,9 @@ export const useApi = () => {
 
 	const request = useCallback(
 		async (method, url, data = null, options = {}) => {
-			// Rate limiting: prevent more than 10 requests per second
+			// Rate limiting: prevent more than 2 requests per second (500ms between requests)
 			const now = Date.now();
-			if (now - lastRequestTimeRef.current < 100) {
+			if (now - lastRequestTimeRef.current < 500) {
 				console.warn("Rate limiting: Request throttled");
 				return {
 					success: false,
@@ -25,7 +25,7 @@ export const useApi = () => {
 			lastRequestTimeRef.current = now;
 
 			// Prevent excessive concurrent requests
-			if (requestCountRef.current > 5) {
+			if (requestCountRef.current > 10) {
 				console.warn("Too many concurrent requests");
 				return {
 					success: false,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Globe,
@@ -39,21 +39,25 @@ const BrowsePage = () => {
     sources: 0
   });
 
+  // Memoize the API calls to prevent infinite loops
+  const memoizedGetSources = useMemo(() => officialUpdates.getSources, []);
+  const memoizedSearch = useMemo(() => officialUpdates.search, []);
+
   const loadAvailableSources = useCallback(async () => {
     try {
-      const response = await officialUpdates.getSources();
+      const response = await memoizedGetSources();
       if (response.success && response.data.available_sources) {
         setAvailableSources(response.data.available_sources);
       }
     } catch (error) {
       console.error('Error loading available sources:', error);
     }
-  }, [officialUpdates]);
+  }, [memoizedGetSources]);
 
   const loadOfficialUpdates = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await officialUpdates.search({
+      const response = await memoizedSearch({
         q: searchQuery || undefined,
         sources: filterSource !== 'all' ? filterSource : undefined,
         category: filterCategory !== 'all' ? filterCategory : undefined,
@@ -76,7 +80,7 @@ const BrowsePage = () => {
     } finally {
       setLoading(false);
     }
-  }, [officialUpdates, searchQuery, filterSource, filterCategory, filterSeverity]);
+  }, [memoizedSearch, searchQuery, filterSource, filterCategory, filterSeverity]);
 
   useEffect(() => {
     // Runs only once on mount to get the list of sources
@@ -84,8 +88,12 @@ const BrowsePage = () => {
   }, [loadAvailableSources]);
 
   useEffect(() => {
-    // Runs whenever the filters change
-    loadOfficialUpdates();
+    // Debounce the search to prevent excessive API calls
+    const timeoutId = setTimeout(() => {
+      loadOfficialUpdates();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [loadOfficialUpdates]);
 
   const loadSampleUpdates = async () => {

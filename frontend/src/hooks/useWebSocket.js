@@ -17,21 +17,22 @@ export const useWebSocket = () => {
 
 	const connect = useCallback(() => {
 		try {
-			// Rate limiting: prevent connection attempts more than once per 2 seconds
+			// Rate limiting: prevent connection attempts more than once per second
 			const now = Date.now();
-			if (now - lastConnectionAttemptRef.current < 2000) {
+			if (now - lastConnectionAttemptRef.current < 1000) {
 				console.warn("WebSocket: Connection attempt throttled");
 				return;
 			}
 			lastConnectionAttemptRef.current = now;
 
 			// Prevent excessive connection attempts
-			if (connectionAttemptsRef.current > 10) {
-				console.warn("WebSocket: Too many connection attempts");
+			if (connectionAttemptsRef.current > 5) {
+				console.warn("WebSocket: Too many connection attempts, stopping");
 				return;
 			}
 
 			if (socketRef.current?.connected) {
+				console.log("WebSocket: Already connected");
 				return;
 			}
 
@@ -40,12 +41,17 @@ export const useWebSocket = () => {
 			}
 
 			connectionAttemptsRef.current++;
+			console.log(
+				`WebSocket: Attempting connection #${connectionAttemptsRef.current}`
+			);
+
 			socketRef.current = io(WS_BASE_URL, {
 				transports: ["websocket", "polling"],
 				timeout: 10000,
 				reconnection: true,
 				reconnectionAttempts: maxReconnectAttempts,
-				reconnectionDelay: 1000,
+				reconnectionDelay: 2000,
+				forceNew: true,
 			});
 
 			socketRef.current.on("connect", () => {
@@ -73,8 +79,15 @@ export const useWebSocket = () => {
 			socketRef.current.on("disconnect", (reason) => {
 				console.log("🔌 WebSocket disconnected:", reason);
 				setConnected(false);
-				if (reason === "io server disconnect") {
-					socketRef.current.connect();
+
+				// Only attempt to reconnect for certain disconnect reasons
+				if (reason === "io server disconnect" || reason === "transport close") {
+					// Wait longer before attempting to reconnect
+					setTimeout(() => {
+						if (!connected) {
+							connect();
+						}
+					}, 3000);
 				}
 			});
 
@@ -86,6 +99,8 @@ export const useWebSocket = () => {
 				);
 				setConnected(true);
 				setError(null);
+				reconnectAttemptsRef.current = 0;
+				connectionAttemptsRef.current = 0;
 				toast.success("Reconnected to real-time services");
 			});
 

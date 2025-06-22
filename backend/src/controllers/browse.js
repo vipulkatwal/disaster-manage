@@ -4,7 +4,7 @@ const logger = require("../utils/logger");
 const getOfficialUpdates = async (req, res) => {
 	try {
 		const { id: disaster_id } = req.params;
-		const { sources = "all", category, limit = 20 } = req.query;
+		const { sources = "all", category, severity, limit = 20 } = req.query;
 
 		logger.info(`Fetching official updates for disaster ${disaster_id}`);
 
@@ -15,9 +15,15 @@ const getOfficialUpdates = async (req, res) => {
 		let filteredUpdates = updates;
 
 		if (category && category !== "all") {
-			filteredUpdates = browseService.filterOfficialUpdates(updates, {
-				category,
-			});
+			filteredUpdates = filteredUpdates.filter(
+				(update) => update.category === category
+			);
+		}
+
+		if (severity && severity !== "all") {
+			filteredUpdates = filteredUpdates.filter(
+				(update) => update.severity === severity
+			);
 		}
 
 		filteredUpdates = filteredUpdates.slice(0, parseInt(limit));
@@ -27,6 +33,7 @@ const getOfficialUpdates = async (req, res) => {
 			total_updates: filteredUpdates.length,
 			sources_used: sources,
 			category: category || "all",
+			severity: severity || "all",
 			last_updated: new Date().toISOString(),
 			updates: filteredUpdates,
 		});
@@ -147,25 +154,64 @@ const getUpdatesByCategory = async (req, res) => {
 
 const searchAllUpdates = async (req, res) => {
 	try {
-		const { q, sources = "all", limit = 50 } = req.query;
+		const {
+			q,
+			sources,
+			category,
+			severity,
+			limit = 50,
+			offset = 0,
+		} = req.query;
 
-		if (!q) {
-			return res.status(400).json({ error: "Search query is required" });
+		logger.info(`Searching updates with params:`, {
+			q,
+			sources,
+			category,
+			severity,
+			limit,
+		});
+
+		let updates = await browseService.fetchOfficialUpdates(
+			sources ? sources.split(",") : ["all"]
+		);
+
+		if (q) {
+			const keywords = q.toLowerCase();
+			updates = updates.filter(
+				(update) =>
+					update.title.toLowerCase().includes(keywords) ||
+					update.content.toLowerCase().includes(keywords) ||
+					update.source.toLowerCase().includes(keywords)
+			);
 		}
 
-		logger.info(`Searching updates for query: ${q}`);
+		if (category && category !== "all") {
+			updates = updates.filter((update) => update.category === category);
+		}
 
-		const updates = await browseService.fetchOfficialUpdates(
-			sources.split(",")
-		);
-		const searchResults = browseService.searchOfficialUpdates(updates, q);
+		if (severity && severity !== "all") {
+			updates = updates.filter((update) => update.severity === severity);
+		}
+
+		// Apply pagination
+		const startIndex = parseInt(offset);
+		const endIndex = startIndex + parseInt(limit);
+		const paginatedUpdates = updates.slice(startIndex, endIndex);
 
 		res.json({
-			query: q,
-			total_results: searchResults.length,
-			sources_used: sources,
+			query: q || "",
+			total_results: updates.length,
+			results: paginatedUpdates,
+			sources_used: sources || "all",
+			category: category || "all",
+			severity: severity || "all",
+			pagination: {
+				limit: parseInt(limit),
+				offset: parseInt(offset),
+				total: updates.length,
+				has_more: endIndex < updates.length,
+			},
 			last_updated: new Date().toISOString(),
-			results: searchResults.slice(0, parseInt(limit)),
 		});
 	} catch (error) {
 		logger.error("Error searching updates:", error);
