@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Globe, 
-  RefreshCw, 
-  Filter, 
+import {
+  Globe,
+  RefreshCw,
+  Filter,
   Search,
   ExternalLink,
   FileText,
@@ -39,36 +39,7 @@ const BrowsePage = () => {
     sources: 0
   });
 
-  useEffect(() => {
-    loadOfficialUpdates();
-    loadAvailableSources();
-  }, []);
-
-  const loadOfficialUpdates = async () => {
-    setLoading(true);
-    try {
-      const response = await officialUpdates.search({
-        q: searchQuery || undefined,
-        sources: filterSource !== 'all' ? filterSource : undefined,
-        limit: 100
-      });
-      
-      if (response.success && response.data.results) {
-        setUpdates(response.data.results);
-        calculateStats(response.data.results);
-        toast.success('Official updates loaded');
-      } else {
-        toast.error('Failed to load official updates');
-      }
-    } catch (error) {
-      console.error('Error loading official updates:', error);
-      toast.error('Error loading official updates');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAvailableSources = async () => {
+  const loadAvailableSources = useCallback(async () => {
     try {
       const response = await officialUpdates.getSources();
       if (response.success && response.data.available_sources) {
@@ -77,27 +48,68 @@ const BrowsePage = () => {
     } catch (error) {
       console.error('Error loading available sources:', error);
     }
-  };
+  }, [officialUpdates]);
 
-  const loadCategoryUpdates = async (category) => {
+  const loadOfficialUpdates = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await officialUpdates.getByCategory(category, {
+      const response = await officialUpdates.search({
+        q: searchQuery || undefined,
         sources: filterSource !== 'all' ? filterSource : undefined,
+        category: filterCategory !== 'all' ? filterCategory : undefined,
+        severity: filterSeverity !== 'all' ? filterSeverity : undefined,
         limit: 100
       });
-      
-      if (response.success && response.data.updates) {
-        setUpdates(response.data.updates);
-        calculateStats(response.data.updates);
-        toast.success(`${category} updates loaded`);
+
+      if (response.success && response.data.results) {
+        setUpdates(response.data.results);
+        calculateStats(response.data.results);
+        if (response.data.results.length > 0) {
+          toast.success(`${response.data.results.length} updates loaded`);
+        }
+      } else {
+        toast.error('Failed to load official updates');
       }
     } catch (error) {
-      console.error('Error loading category updates:', error);
-      toast.error('Error loading category updates');
+      console.error('Error loading official updates:', error);
+      toast.error('An error occurred while fetching updates.');
     } finally {
       setLoading(false);
     }
+  }, [officialUpdates, searchQuery, filterSource, filterCategory, filterSeverity]);
+
+  useEffect(() => {
+    // Runs only once on mount to get the list of sources
+    loadAvailableSources();
+  }, [loadAvailableSources]);
+
+  useEffect(() => {
+    // Runs whenever the filters change
+    loadOfficialUpdates();
+  }, [loadOfficialUpdates]);
+
+  const loadSampleUpdates = async () => {
+    setLoading(true);
+    try {
+      // Assuming the backend has a mock/sample route or we can use a predefined query
+      const response = await officialUpdates.search({ limit: 10, sample: true });
+      if (response.success && response.data.results) {
+        setUpdates(response.data.results);
+        calculateStats(response.data.results);
+        toast.success('Sample updates loaded successfully');
+      } else {
+        toast.error('Could not load sample updates.');
+      }
+    } catch (error) {
+      console.error('Error loading sample updates:', error);
+      toast.error('Failed to load sample data.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApplyFilters = () => {
+    loadOfficialUpdates();
   };
 
   const calculateStats = (updatesData) => {
@@ -112,14 +124,14 @@ const BrowsePage = () => {
   };
 
   const filteredUpdates = updates.filter(update => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       update.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
       update.source.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesSeverity = filterSeverity === 'all' || update.severity === filterSeverity;
     const matchesCategory = filterCategory === 'all' || update.category === filterCategory;
-    
+
     return matchesSearch && matchesSeverity && matchesCategory;
   });
 
@@ -205,7 +217,7 @@ const BrowsePage = () => {
             Real-time updates from government agencies and relief organizations
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <button
             onClick={loadOfficialUpdates}
@@ -245,10 +257,10 @@ const BrowsePage = () => {
           {quickCategories.map((category) => (
             <button
               key={category.key}
-              onClick={() => loadCategoryUpdates(category.key)}
+              onClick={() => setFilterCategory(category.key)}
               className={`p-4 rounded-lg border-2 border-dashed transition-all hover:border-solid hover:shadow-md ${
-                filterCategory === category.key 
-                  ? `border-${category.color}-500 bg-${category.color}-50` 
+                filterCategory === category.key
+                  ? `border-${category.color}-500 bg-${category.color}-50`
                   : 'border-gray-300 hover:border-gray-400'
               }`}
             >
@@ -271,7 +283,7 @@ const BrowsePage = () => {
               />
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <Filter className="w-4 h-4 text-gray-500" />
             <select
@@ -286,7 +298,7 @@ const BrowsePage = () => {
                 </option>
               ))}
             </select>
-            
+
             <select
               value={filterCategory}
               onChange={(e) => setFilterCategory(e.target.value)}
@@ -300,7 +312,7 @@ const BrowsePage = () => {
             </select>
 
             <button
-              onClick={loadOfficialUpdates}
+              onClick={handleApplyFilters}
               className="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               Apply Filters
@@ -366,7 +378,7 @@ const BrowsePage = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2">
                       <span className={`px-3 py-1 text-xs font-bold rounded-full border ${getSeverityColor(update.severity)}`}>
                         {update.severity.toUpperCase()} PRIORITY
@@ -418,18 +430,16 @@ const BrowsePage = () => {
           ) : (
             <div className="text-center py-12">
               <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No official updates found</h3>
-              <p className="text-gray-500 mb-6">
-                {searchQuery || filterSource !== 'all' || filterCategory !== 'all'
-                  ? 'Try adjusting your search or filter criteria' 
-                  : 'Official updates from government agencies will appear here'
-                }
+              <h3 className="text-xl font-semibold text-gray-800">No official updates found</h3>
+              <p className="text-gray-500 mt-2 mb-6">
+                Official updates from government agencies will appear here
               </p>
               <button
-                onClick={loadOfficialUpdates}
-                className="inline-flex items-center space-x-2 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                onClick={loadSampleUpdates}
+                disabled={loading}
+                className="flex items-center mx-auto space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all duration-200 transform hover:scale-105 disabled:opacity-50"
               >
-                <RefreshCw className="w-5 h-5" />
+                <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
                 <span>Load Sample Updates</span>
               </button>
             </div>
@@ -464,8 +474,8 @@ const BrowsePage = () => {
                   <p className="text-sm text-gray-600 mb-3">{source.description}</p>
                   <div className="flex items-center justify-between">
                     <span className={`px-2 py-1 text-xs rounded-full ${
-                      source.active 
-                        ? 'bg-green-100 text-green-800' 
+                      source.active
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-600'
                     }`}>
                       {source.active ? 'Active' : 'Inactive'}
