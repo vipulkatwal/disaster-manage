@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  MessageCircle, 
-  RefreshCw, 
-  Filter, 
+import {
+  MessageCircle,
+  RefreshCw,
+  Filter,
   Search,
   AlertTriangle,
   Clock,
@@ -45,7 +45,7 @@ const SocialMediaPage = () => {
         disaster_type: selectedDisasterType,
         limit: 100
       });
-      
+
       if (response.success && response.data.posts) {
         setPosts(response.data.posts);
         calculateStats(response.data.posts);
@@ -74,9 +74,13 @@ const SocialMediaPage = () => {
 
   const filteredPosts = posts.filter(post => {
     const matchesPriority = filterPriority === 'all' || post.priority === filterPriority;
-    const matchesSearch = !searchQuery || 
-      post.post.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.user.toLowerCase().includes(searchQuery.toLowerCase());
+    const postContent = post.post || '';
+    const postUser = post.user || '';
+
+    const matchesSearch = !searchQuery ||
+      postContent.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      postUser.toLowerCase().includes(searchQuery.toLowerCase());
+
     return matchesPriority && matchesSearch;
   });
 
@@ -141,7 +145,7 @@ const SocialMediaPage = () => {
             Real-time social media posts and alerts for disaster response
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <button
             onClick={loadMockSocialMediaPosts}
@@ -190,7 +194,7 @@ const SocialMediaPage = () => {
               />
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-3">
             <Filter className="w-4 h-4 text-gray-500" />
             <select
@@ -204,7 +208,7 @@ const SocialMediaPage = () => {
                 </option>
               ))}
             </select>
-            
+
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value)}
@@ -261,18 +265,19 @@ const SocialMediaPage = () => {
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
-                        {post.user.charAt(0).toUpperCase()}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${getPriorityColor(post.priority)}`}>
+                        {post.user ? post.user.charAt(0).toUpperCase() : '?'}
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">@{post.user}</p>
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Clock className="w-4 h-4 mr-1" />
-                          {getTimeAgo(post.timestamp)}
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900">{post.user || 'Anonymous'}</p>
+                        <div className="flex items-center text-xs text-gray-500 space-x-2">
+                          <span>@{post.user ? post.user.toLowerCase() : 'unknown'}</span>
+                          <span>·</span>
+                          <span>{getTimeAgo(post.timestamp)}</span>
                         </div>
                       </div>
                     </div>
-                    
+
                     <span className={`px-3 py-1 text-xs font-bold rounded-full border ${getPriorityColor(post.priority)}`}>
                       {post.priority.toUpperCase()}
                     </span>
@@ -309,7 +314,7 @@ const SocialMediaPage = () => {
                         <Heart className="w-4 h-4" />
                         <span>{Math.floor(Math.random() * 100)}</span>
                       </button>
-                      
+
                       <button className="flex items-center space-x-2 hover:text-blue-600 transition-colors">
                         <Share className="w-4 h-4" />
                         <span>Share</span>
@@ -336,8 +341,8 @@ const SocialMediaPage = () => {
                         <span className="font-semibold">{post.relevance_score}/10</span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                           style={{ width: `${(post.relevance_score / 10) * 100}%` }}
                         ></div>
                       </div>
@@ -351,8 +356,8 @@ const SocialMediaPage = () => {
               <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No social media posts found</h3>
               <p className="text-gray-500 mb-6">
-                {searchQuery || filterPriority !== 'all' 
-                  ? 'Try adjusting your search or filter criteria' 
+                {searchQuery || filterPriority !== 'all'
+                  ? 'Try adjusting your search or filter criteria'
                   : 'Social media feeds will appear here when available'
                 }
               </p>
