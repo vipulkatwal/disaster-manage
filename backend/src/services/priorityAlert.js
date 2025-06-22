@@ -410,12 +410,28 @@ class PriorityAlertSystem {
 		const results = [];
 		const alerts = [];
 
-		for (const post of posts) {
+		const analysisPromises = posts.map(async (post) => {
+			// Ensure post is a valid object before proceeding
+			if (!post || typeof post !== "object") {
+				return {
+					originalPost: post,
+					priority: "low",
+					score: 0,
+					confidence: 0,
+					analysis: { error: "Invalid post object" },
+				};
+			}
 			const analysis = await this.analyzeSocialMediaPost(post);
+			return { ...analysis, originalPost: post };
+		});
+
+		const analyses = await Promise.all(analysisPromises);
+
+		for (const analysis of analyses) {
 			results.push(analysis);
 
 			if (analysis.requiresImmediateAction) {
-				const alert = await this.generateAlert(post, analysis);
+				const alert = await this.generateAlert(analysis.originalPost, analysis);
 				if (alert) {
 					alerts.push(alert);
 				}

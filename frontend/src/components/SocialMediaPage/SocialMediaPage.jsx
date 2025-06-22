@@ -254,10 +254,10 @@ const SocialMediaPage = () => {
               </div>
             </div>
           ) : filteredPosts.length > 0 ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredPosts.map((post, index) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPosts.filter(Boolean).map((post, index) => (
                 <motion.div
-                  key={post.id}
+                  key={post.id || index}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
