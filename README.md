@@ -1,372 +1,113 @@
-# 🚨 Disaster Response Coordination Platform
+# Geo Aid+ : Real-Time Disaster Response Coordination Platform
 
-A comprehensive MERN stack application for real-time disaster management and response coordination. This platform aggregates data from multiple sources to provide emergency responders with critical information during disasters.
 
-## 🌟 Features
 
-### Core Disaster Management
-- **CRUD Operations**: Create, read, update, and delete disaster records with full audit trails
-- **Location Intelligence**: AI-powered location extraction from descriptions using Google Gemini API
-- **Geospatial Mapping**: Convert locations to coordinates using multiple mapping services
-- **Priority Classification**: Advanced keyword-based prioritization system
-- **Real-time Updates**: WebSocket-powered live updates across all components
-
-### AI-Powered Features
-- **Location Extraction**: Google Gemini API extracts location names from disaster descriptions
-- **Image Verification**: AI analysis of uploaded images for authenticity and disaster context
-- **Smart Prioritization**: Machine learning-based classification of social media posts
-- **Content Analysis**: Automatic tagging and categorization of reports
-
-### Social Media Integration
-- **Multi-Platform Support**: Twitter API, Bluesky API, and mock data sources
-- **Real-time Monitoring**: Live social media feed with priority alerts
-- **Keyword Filtering**: Intelligent filtering based on disaster types and keywords
-- **Credibility Scoring**: Automated assessment of post reliability
-
-### Geospatial Resource Management
-- **Nearby Resource Lookup**: Find resources within specified radius using PostGIS
-- **Interactive Mapping**: Leaflet-based map with custom markers
-- **Location-based Queries**: Efficient geospatial searches with proper indexing
-- **Resource Tracking**: Real-time availability and capacity monitoring
-
-### Official Updates Aggregation
-- **Web Scraping**: Automated collection from FEMA, Red Cross, and government sources
-- **Categorized Updates**: Filter by source, severity, and category
-- **Caching System**: Intelligent caching to handle rate limits
-- **Real-time Feeds**: Live updates from official sources
-
-### Advanced Features
-- **Priority Alert System**: Automated detection of urgent situations
-- **Comprehensive Caching**: Redis-like caching with TTL for all external API calls
-- **Rate Limiting**: Multi-tier rate limiting for API protection
-- **Structured Logging**: Detailed logging for monitoring and debugging
-- **Error Handling**: Robust error handling with graceful fallbacks
-
-## 🏗️ Architecture
-
-### Backend (Node.js/Express)
-```
-backend/
-├── src/
-│   ├── controllers/     # API endpoint handlers
-│   ├── middleware/      # Auth, rate limiting, caching
-│   ├── routes/          # API route definitions
-│   ├── services/        # Business logic and external APIs
-│   ├── database/        # Database schema and migrations
-│   └── utils/           # Logging and utilities
-```
-
-### Frontend (React)
-```
-frontend/
-├── src/
-│   ├── components/      # React components
-│   ├── hooks/           # Custom React hooks
-│   ├── services/        # API and WebSocket services
-│   └── styles/          # CSS and Tailwind config
-```
-
-### Database (Supabase/PostgreSQL)
-- **PostGIS Extension**: Geospatial queries and indexing
-- **JSONB Support**: Flexible data storage for audit trails and analysis
-- **Custom Functions**: Optimized geospatial queries
-- **Comprehensive Indexing**: Performance optimization for all query types
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ and npm
-- Supabase account and project
-- Google Gemini API key
-- Optional: Twitter API, Mapbox API keys
-
-### Environment Variables
-
-Create `.env` files in both `backend/` and `frontend/` directories:
-
-#### Backend (.env)
-```env
-# Supabase
-SUPABASE_URL=your_supabase_url
-SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Google Gemini API
-GEMINI_API_KEY=your_gemini_api_key
-
-# Optional APIs
-GOOGLE_MAPS_API_KEY=your_google_maps_key
-MAPBOX_ACCESS_TOKEN=your_mapbox_token
-TWITTER_BEARER_TOKEN=your_twitter_token
-BLUESKY_ACCESS_TOKEN=your_bluesky_token
-
-# Server
-PORT=5000
-NODE_ENV=development
-CACHE_TTL=3600000
-```
-
-#### Frontend (.env)
-```env
-REACT_APP_API_URL=http://localhost:5000/api
-REACT_APP_WEBSOCKET_URL=http://localhost:5000
-REACT_APP_DEFAULT_USER_ID=netrunnerX
-REACT_APP_DEBUG_MODE=true
-```
-
-### Installation
-
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd disaster-manage
-```
-
-2. **Install dependencies**
-```bash
-# Backend
-cd backend
-npm install
-
-# Frontend
-cd ../frontend
-npm install
-```
-
-3. **Set up database**
-```bash
-# Run the schema in your Supabase SQL editor
-# Copy contents of backend/src/database/schema.sql
-```
-
-4. **Start the application**
-```bash
-# Backend (from backend directory)
-npm run dev
-
-# Frontend (from frontend directory)
-npm start
-```
-
-## 📚 API Documentation
-
-### Disaster Management
-
-#### Create Disaster
-```http
-POST /api/disasters
-Content-Type: application/json
-
-{
-  "title": "Flood in Lower Manhattan",
-  "location_name": "Lower Manhattan, NYC",
-  "description": "Severe flooding affecting downtown area",
-  "tags": ["flood", "urgent"]
-}
-```
-
-#### Get Disasters
-```http
-GET /api/disasters?tag=flood&limit=20&offset=0
-```
-
-#### Update Disaster
-```http
-PUT /api/disasters/:id
-Content-Type: application/json
-
-{
-  "title": "Updated title",
-  "priority": "high"
-}
-```
-
-### Social Media Integration
-
-#### Get Social Media Reports
-```http
-GET /api/disasters/:id/social-media?keywords=flood,emergency&analyze=true
-```
-
-#### Analyze Social Media Post
-```http
-POST /api/social-media/analyze
-Content-Type: application/json
-
-{
-  "post": {
-    "id": "123",
-    "post": "URGENT: Need help in downtown area! #floodrelief",
-    "user": "citizen1"
-  }
-}
-```
-
-### Geospatial Resources
-
-#### Get Nearby Resources
-```http
-GET /api/disasters/:id/resources?lat=40.7128&lon=-74.0060&radius=10000&type=shelter
-```
-
-### Official Updates
-
-#### Get Official Updates
-```http
-GET /api/disasters/:id/official-updates?sources=fema,redcross&category=shelter
-```
-
-### Image Verification
-
-#### Verify Image
-```http
-POST /api/disasters/:id/verify-image
-Content-Type: application/json
-
-{
-  "image_url": "https://example.com/disaster-image.jpg"
-}
-```
-
-### Geocoding
-
-#### Geocode Location
-```http
-POST /api/geocode
-Content-Type: application/json
-
-{
-  "location_name": "Lower Manhattan, NYC"
-}
-```
-
-## 🔧 Advanced Configuration
-
-### Database Optimization
-
-1. **Enable PostGIS extension** in Supabase
-2. **Create geospatial indexes** for performance
-3. **Set up custom functions** for complex queries
-
-### Caching Strategy
-
-- **API Responses**: 1-hour TTL for external API calls
-- **Geocoding**: 24-hour TTL for location data
-- **Social Media**: 15-minute TTL for real-time data
-- **Official Updates**: 1-hour TTL for web scraping
-
-### Rate Limiting
-
-- **Read Operations**: 100 requests/minute
-- **Write Operations**: 20 requests/minute
-- **External APIs**: 10 requests/minute
-- **Image Verification**: 5 requests/minute
-
-## 🧪 Testing
-
-### Backend Tests
-```bash
-cd backend
-npm test
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm test
-```
-
-### API Testing
-```bash
-# Test all endpoints
-curl -X GET http://localhost:5000/health
-
-# Test disaster creation
-curl -X POST http://localhost:5000/api/disasters \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Test Disaster","description":"Test description"}'
-```
-
-## 📊 Monitoring and Logging
-
-### Structured Logging
-The application uses structured logging with different levels:
-- `info`: General application events
-- `warn`: Non-critical issues
-- `error`: Critical errors
-- `debug`: Detailed debugging information
-
-### Health Checks
-```http
-GET /health
-```
-
-### Performance Metrics
-- API response times
-- Database query performance
-- Cache hit rates
-- WebSocket connection status
-
-## 🔒 Security Features
-
-- **CORS Configuration**: Proper origin validation
-- **Rate Limiting**: API abuse prevention
-- **Input Validation**: Comprehensive request validation
-- **Error Handling**: Secure error responses
-- **Authentication**: User-based access control
-
-## 🚀 Deployment
-
-### Backend Deployment
-```bash
-# Build for production
-npm run build
-
-# Start production server
-npm start
-```
-
-### Frontend Deployment
-```bash
-# Build for production
-npm run build
-
-# Deploy to your preferred platform
-# (Vercel, Netlify, etc.)
-```
-
-### Environment Setup
-1. Set `NODE_ENV=production`
-2. Configure production database URLs
-3. Set up proper CORS origins
-4. Configure SSL certificates
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## 🙏 Acknowledgments
-
-- **Google Gemini API** for AI-powered features
-- **Supabase** for database and real-time features
-- **Leaflet** for interactive mapping
-- **Socket.IO** for real-time communication
-- **Tailwind CSS** for styling
-
-## 📞 Support
-
-For support and questions:
-- Create an issue in the repository
-- Check the documentation
-- Review the API examples
+<p align="center">
+  <a href="#-features">Features</a> •
+  <a href="#-screenshots">Screenshots</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-getting-started">Getting Started</a> •
+  <a href="#-license">License</a>
+</p>
 
 ---
 
-**Built with ❤️ for emergency response coordination**
+## ✨ Features
+
+Geo Aid+ is a comprehensive, full-stack platform designed to provide critical, real-time information and coordination during emergency situations.
+
+- **🗺️ Interactive Geospatial Map:** Visualize all disasters and resources on a live, interactive map.
+- **🚨 Real-Time Disaster Reporting:** Instantly report emergencies with AI-powered location extraction.
+- **📊 Dynamic Dashboard:** A stunning, pixel-perfect dashboard for at-a-glance situational awareness.
+- **📱 Live Social Media Feeds:** Aggregate and analyze social media posts for real-time intelligence.
+- **🏛️ Official Updates:** Scrape and display official news from government and aid organizations.
+- **🔍 Advanced Filtering & Search:** Easily browse and filter disasters and resources.
+- **🤖 AI-Powered Analysis:** Use Google Gemini to extract locations from descriptions and verify images.
+- **🌐 Real-Time Websockets:** Live updates across the entire platform for seamless coordination.
+- **🔐 Authentication & Authorization:** Secure routes and actions for authorized personnel.
+
+## 📸 Screenshots
+
+<details>
+<summary>Click to view the app in action</summary>
+<br/>
+<em>The beautiful, pixel-perfect dashboard provides a complete overview of the situation.</em>
+<img src="screenshots/dashboard.png" alt="Dashboard View"/>
+<br/><br/>
+<em>The interactive map is the core of the platform, showing all disasters and resources.</em>
+<img src="screenshots/map.png" alt="Map View"/>
+<br/><br/>
+<em>Browse and filter all active disasters in a clean, organized list.</em>
+<img src="screenshots/disaster.png" alt="Disaster List View"/>
+<br/><br/>
+<em>Monitor live social media feeds to gain real-time insights from the ground.</em>
+<img src="screenshots/social.png" alt="Social Media Feed"/>
+<br/><br/>
+<em>Aggregate and view official updates from trusted sources.</em>
+<img src="screenshots/browse.png" alt="Browse Official Updates"/>
+</details>
+
+## 🛠️ Tech Stack
+
+| Category      | Technology                                                                                                  |
+|---------------|-------------------------------------------------------------------------------------------------------------|
+| **Frontend**  | ![React](https://img.shields.io/badge/react-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB) ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=for-the-badge&logo=tailwind-css&logoColor=white) ![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white) ![Framer](https://img.shields.io/badge/framer-%230055FF.svg?style=for-the-badge&logo=framer&logoColor=white)  |
+| **Backend**   | ![NodeJS](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white) ![Express.js](https://img.shields.io/badge/express.js-%23404d59.svg?style=for-the-badge&logo=express&logoColor=white) ![Socket.io](https://img.shields.io/badge/Socket.io-black?style=for-the-badge&logo=socket.io&badgeColor=010101) |
+| **Database**  | ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white) ![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white) ![PostGIS](https://img.shields.io/badge/postgis-brightgreen?style=for-the-badge)    |
+| **AI**        | ![Google Gemini](https://img.shields.io/badge/gemini-6059B5?style=for-the-badge&logo=google&logoColor=white)                               |
+| **Deployment**| ![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white) ![Render](https://img.shields.io/badge/render-%2346E3B7.svg?style=for-the-badge&logo=render&logoColor=white)                               |
+
+## 🚀 Getting Started
+
+Follow these instructions to get the project up and running on your local machine.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/en/) (v18 or later)
+- [npm](https://www.npmjs.com/)
+- A [Supabase](https://supabase.com/) account for the database.
+- A [Google Gemini API Key](https://aistudio.google.com/app/apikey) for AI features.
+
+### Local Installation
+
+1.  **Clone the repository:**
+    ```sh
+    git clone https://github.com/PiyushKADev/disaster-manage.git
+    cd disaster-manage
+    ```
+
+2.  **Set up the Backend:**
+    ```sh
+    cd backend
+    npm install
+    cp .env.example .env
+    ```
+    > Fill in the variables in your new `.env` file with your credentials (Supabase, Gemini, etc.).
+
+3.  **Set up the Frontend:**
+    ```sh
+    cd ../frontend
+    npm install
+    cp .env.example .env
+    ```
+    > Update `REACT_APP_API_URL` in the `.env` file if your backend is not running on port 5000.
+
+4.  **Set up the Database Schema:**
+    - Navigate to the SQL Editor in your Supabase project.
+    - Open the `backend/src/database/schema.sql` file, copy its contents, and run it in the Supabase SQL Editor.
+
+5.  **Run the Application:**
+    - **Start the Backend Server:**
+      ```sh
+      # from the 'backend' directory
+      npm run dev
+      ```
+    - **Start the Frontend Development Server:**
+      ```sh
+      # from the 'frontend' directory
+      npm start
+      ```
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
