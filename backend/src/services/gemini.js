@@ -20,6 +20,12 @@ const extractLocationFromDescription = async (description) => {
 			return cachedResult;
 		}
 
+		// Check if Gemini API key is available
+		if (!GEMINI_API_KEY) {
+			logger.warn("GEMINI_API_KEY not available, using fallback extraction");
+			return extractLocationWithFallback(description);
+		}
+
 		const prompt = `From the following disaster description, extract the most specific geographical location mentioned. This could be a city, state, landmark, address, or a well-known area.
 
 Your response should be ONLY the location name. Do not add any extra words, explanations, or labels like "Location:".
@@ -56,7 +62,10 @@ Description: "${description}"`;
 		);
 
 		if (!response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-			throw new Error("Invalid response from Gemini API");
+			logger.warn(
+				"Invalid response from Gemini API, using fallback extraction"
+			);
+			return extractLocationWithFallback(description);
 		}
 
 		const extractedLocation =
@@ -67,7 +76,10 @@ Description: "${description}"`;
 			extractedLocation.toLowerCase().includes("no location") ||
 			extractedLocation.length < 2
 		) {
-			return null;
+			logger.info(
+				'Gemini returned "unknown" location, using fallback extraction'
+			);
+			return extractLocationWithFallback(description);
 		}
 
 		await setCachedData(cacheKey, extractedLocation);
@@ -76,23 +88,36 @@ Description: "${description}"`;
 		return extractedLocation;
 	} catch (error) {
 		logger.error("Error extracting location from description:", error.message);
+		logger.info("Using fallback location extraction due to Gemini API error");
+		return extractLocationWithFallback(description);
+	}
+};
 
-		const locationPatterns = [
-			/in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
-			/at\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
-			/near\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
-		];
+const extractLocationWithFallback = (description) => {
+	const locationPatterns = [
+		/in\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
+		/at\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
+		/near\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/g,
+		/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:city|town|village|district|area)/g,
+		/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*([A-Z]{2})/g, // City, State format
+		/([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+(?:street|avenue|road|boulevard|drive)/g,
+	];
 
-		for (const pattern of locationPatterns) {
-			const match = description.match(pattern);
-			if (match && match[1]) {
-				logger.info(`Fallback location extraction: "${match[1]}"`);
-				return match[1];
+	for (const pattern of locationPatterns) {
+		const match = description.match(pattern);
+		if (match && match[1]) {
+			const location = match[1].trim();
+			if (location.length > 1) {
+				logger.info(`Fallback location extraction: "${location}"`);
+				return location;
 			}
 		}
-
-		return null;
 	}
+
+	logger.warn(
+		"No location could be extracted from description using fallback patterns"
+	);
+	return null;
 };
 
 const verifyImageWithGemini = async (imageUrl) => {
