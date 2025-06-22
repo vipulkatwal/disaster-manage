@@ -14,58 +14,70 @@ const server = http.createServer(app);
 
 app.set("trust proxy", 1);
 
-// CORS configuration for production and development
-const allowedOrigins =
-	process.env.NODE_ENV === "production"
-		? [
-				"https://geo-aid.vercel.app",
-				// Allow any Vercel domain
-				/^https:\/\/.*\.vercel\.app$/,
-				// Allow any Netlify domain
-				/^https:\/\/.*\.netlify\.app$/,
-				// Allow any Render domain (for potential frontend deployment)
-				/^https:\/\/.*\.onrender\.com$/,
-				// Allow custom domains
-				...(process.env.CORS_ORIGINS
-					? process.env.CORS_ORIGINS.split(",")
-					: []),
-		  ]
-		: [
-				"http://localhost:3000",
-				"http://localhost:3001",
-				"http://localhost:5173",
-		  ];
+// Simplified CORS configuration
+const corsOptions = {
+	origin: function (origin, callback) {
+		// Allow requests with no origin (like mobile apps or curl requests)
+		if (!origin) return callback(null, true);
+
+		const allowedOrigins = [
+			"https://geo-aid.vercel.app",
+			"https://geo-aid-git-main-piyushkatwal.vercel.app",
+			"https://geo-aid-piyushkatwal.vercel.app",
+			"http://localhost:3000",
+			"http://localhost:3001",
+			"http://localhost:5173",
+		];
+
+		// Allow any Vercel domain
+		if (origin.includes("vercel.app")) {
+			return callback(null, true);
+		}
+
+		if (allowedOrigins.indexOf(origin) !== -1) {
+			callback(null, true);
+		} else {
+			logger.warn(`CORS blocked origin: ${origin}`);
+			callback(new Error("Not allowed by CORS"));
+		}
+	},
+	credentials: true,
+	methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+	allowedHeaders: [
+		"Content-Type",
+		"Authorization",
+		"X-Requested-With",
+		"Accept",
+		"Origin",
+		"x-user-id",
+		"x-request-id",
+		"x-request-time",
+	],
+	optionsSuccessStatus: 200, // Some legacy browsers (IE11, various SmartTVs) choke on 204
+};
 
 const io = socketIo(server, {
 	cors: {
 		origin: function (origin, callback) {
 			if (!origin) return callback(null, true);
 
-			// In production, we can also allow the Vercel preview URLs
-			if (
-				process.env.NODE_ENV === "production" &&
-				origin.includes("vercel.app")
-			) {
+			// Allow any Vercel domain for WebSocket
+			if (origin.includes("vercel.app")) {
 				return callback(null, true);
 			}
 
-			// Check if origin matches any allowed pattern
-			const isAllowed = allowedOrigins.some((allowed) => {
-				if (typeof allowed === "string") {
-					return origin === allowed;
-				}
-				if (allowed instanceof RegExp) {
-					return allowed.test(origin);
-				}
-				return false;
-			});
+			const allowedOrigins = [
+				"https://geo-aid.vercel.app",
+				"http://localhost:3000",
+				"http://localhost:3001",
+			];
 
-			if (isAllowed) {
-				return callback(null, true);
+			if (allowedOrigins.indexOf(origin) !== -1) {
+				callback(null, true);
+			} else {
+				logger.warn(`WebSocket CORS blocked origin: ${origin}`);
+				callback(new Error("Not allowed by CORS"));
 			}
-
-			logger.warn(`WebSocket CORS blocked origin: ${origin}`);
-			callback(new Error("Not allowed by CORS"));
 		},
 		methods: ["GET", "POST"],
 		credentials: true,
@@ -86,51 +98,26 @@ app.use(
 	})
 );
 
-app.use(
-	cors({
-		origin: function (origin, callback) {
-			if (!origin) return callback(null, true);
+// Apply CORS before other middleware
+app.use(cors(corsOptions));
 
-			// In production, we can also allow the Vercel preview URLs
-			if (
-				process.env.NODE_ENV === "production" &&
-				origin.includes("vercel.app")
-			) {
-				return callback(null, true);
-			}
+// Handle preflight requests explicitly
+app.options("*", cors(corsOptions));
 
-			// Check if origin matches any allowed pattern
-			const isAllowed = allowedOrigins.some((allowed) => {
-				if (typeof allowed === "string") {
-					return origin === allowed;
-				}
-				if (allowed instanceof RegExp) {
-					return allowed.test(origin);
-				}
-				return false;
-			});
-
-			if (isAllowed) {
-				return callback(null, true);
-			}
-
-			logger.warn(`CORS blocked origin: ${origin}`);
-			callback(new Error("Not allowed by CORS"));
-		},
-		credentials: true,
-		methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-		allowedHeaders: [
-			"Content-Type",
-			"Authorization",
-			"x-user-id",
-			"x-request-id",
-			"x-request-time",
-		],
-	})
-);
-
+// Add detailed request logging for debugging
 app.use((req, res, next) => {
-	logger.info(`${req.method} ${req.path} - ${req.ip}`);
+	logger.info(
+		`${req.method} ${req.path} - ${req.ip} - Origin: ${
+			req.headers.origin || "No origin"
+		}`
+	);
+
+	// Log CORS headers for debugging
+	if (req.method === "OPTIONS") {
+		logger.info("Preflight request detected");
+		logger.info("Request headers:", req.headers);
+	}
+
 	next();
 });
 
