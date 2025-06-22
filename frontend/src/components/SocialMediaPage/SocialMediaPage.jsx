@@ -21,9 +21,14 @@ import toast from 'react-hot-toast';
 const SocialMediaPage = () => {
   const { socialMedia } = useApi();
   const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [filteredPosts, setFilteredPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedPlatform, setSelectedPlatform] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const [filterPriority, setFilterPriority] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedDisasterType, setSelectedDisasterType] = useState('');
   const [stats, setStats] = useState({
     total: 0,
@@ -34,31 +39,67 @@ const SocialMediaPage = () => {
   });
 
   useEffect(() => {
-    loadMockSocialMediaPosts();
-  }, []);
+    loadSocialMediaPosts();
 
-  const loadMockSocialMediaPosts = async () => {
-    setLoading(true);
+    // Auto-refresh every 30 seconds if enabled
+    let interval;
+    if (autoRefresh) {
+      interval = setInterval(loadSocialMediaPosts, 30000);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [autoRefresh]);
+
+  useEffect(() => {
+    filterPosts();
+  }, [posts, searchTerm, selectedPlatform, selectedCategory]);
+
+  const loadSocialMediaPosts = async () => {
     try {
-      const response = await socialMedia.getMockData({
-        keywords: searchQuery,
+      setLoading(true);
+      const data = await socialMedia.getMockData({
+        keywords: searchTerm,
         disaster_type: selectedDisasterType,
         limit: 100
       });
-
-      if (response.success && response.data.posts) {
-        setPosts(response.data.posts);
-        calculateStats(response.data.posts);
-        toast.success('Social media feeds loaded');
-      } else {
-        toast.error('Failed to load social media posts');
-      }
-    } catch (error) {
-      console.error('Error loading social media posts:', error);
+      setPosts(data.data.posts);
+      calculateStats(data.data.posts);
+      setError(null);
+      toast.success('Social media feeds loaded');
+    } catch (err) {
+      console.error('Error loading social media posts:', err);
+      setError('Failed to load social media posts');
       toast.error('Error loading social media feeds');
     } finally {
       setLoading(false);
     }
+  };
+
+  const filterPosts = () => {
+    let filtered = [...posts];
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(post =>
+        post.post.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.location_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filter by platform
+    if (selectedPlatform !== 'all') {
+      filtered = filtered.filter(post => post.platform === selectedPlatform);
+    }
+
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(post => post.category === selectedCategory);
+    }
+
+    setFilteredPosts(filtered);
   };
 
   const calculateStats = (postsData) => {
@@ -72,13 +113,59 @@ const SocialMediaPage = () => {
     setStats(statsData);
   };
 
-  const filteredPosts = posts.filter(post => {
-    const matchesPriority = filterPriority === 'all' || post.priority === filterPriority;
-    const matchesSearch = !searchQuery ||
-      post.post.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.user.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesPriority && matchesSearch;
-  });
+  const getPlatformIcon = (platform) => {
+    switch (platform.toLowerCase()) {
+      case 'twitter':
+        return <div className="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center text-white text-xs font-bold">T</div>;
+      case 'facebook':
+        return <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">F</div>;
+      case 'instagram':
+        return <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center text-white text-xs font-bold">I</div>;
+      case 'bluesky':
+        return <div className="w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center text-white text-xs font-bold">B</div>;
+      default:
+        return <MessageCircle className="w-6 h-6 text-gray-400" />;
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'emergency':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'information':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'support':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'update':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const getSentimentColor = (sentiment) => {
+    switch (sentiment) {
+      case 'positive':
+        return 'text-green-600';
+      case 'negative':
+        return 'text-red-600';
+      case 'neutral':
+        return 'text-gray-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
 
   const getAvatarFallback = (username) => {
     if (!username || typeof username !== 'string' || username.length === 0) {
@@ -132,6 +219,14 @@ const SocialMediaPage = () => {
     { value: 'tornado', label: 'Tornado' }
   ];
 
+  if (loading && posts.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -148,7 +243,7 @@ const SocialMediaPage = () => {
             <p className="text-gray-500 mt-1">Real-time social media posts and alerts for disaster response</p>
           </div>
           <button
-            onClick={loadMockSocialMediaPosts}
+            onClick={loadSocialMediaPosts}
             disabled={loading}
             className="flex items-center space-x-2 px-4 py-2 mt-4 sm:mt-0 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
           >
@@ -185,10 +280,38 @@ const SocialMediaPage = () => {
               <input
                 type="text"
                 placeholder="Search posts by content, user, or hashtags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
               />
+            </div>
+            <div className="flex items-center space-x-3">
+              <Filter className="w-5 h-5 text-gray-400" />
+              <select
+                value={selectedPlatform}
+                onChange={(e) => setSelectedPlatform(e.target.value)}
+                className="border border-gray-300 rounded-lg px-4 py-3 w-full md:w-auto bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Platforms</option>
+                <option value="twitter">Twitter</option>
+                <option value="facebook">Facebook</option>
+                <option value="instagram">Instagram</option>
+                <option value="bluesky">Bluesky</option>
+              </select>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Filter className="w-5 h-5 text-gray-400" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="border border-gray-300 rounded-lg px-4 py-3 w-full md:w-auto bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Categories</option>
+                <option value="emergency">Emergency</option>
+                <option value="information">Information</option>
+                <option value="support">Support</option>
+                <option value="update">Update</option>
+              </select>
             </div>
             <div className="flex items-center space-x-3">
               <Filter className="w-5 h-5 text-gray-400" />
@@ -203,9 +326,17 @@ const SocialMediaPage = () => {
                   </option>
                 ))}
               </select>
-              <button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm w-full md:w-auto">
-                Apply Filters
-              </button>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Filter className="w-5 h-5 text-gray-400" />
+              <select
+                value={autoRefresh ? 'auto' : 'manual'}
+                onChange={(e) => setAutoRefresh(e.target.value === 'auto')}
+                className="border border-gray-300 rounded-lg px-4 py-3 w-full md:w-auto bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="auto">Auto-refresh</option>
+                <option value="manual">Manual</option>
+              </select>
             </div>
           </div>
         </motion.div>

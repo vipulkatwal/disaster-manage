@@ -1,0 +1,40 @@
+services:
+  # Backend API Service
+  - type: web
+    name: disaster-manage-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: TWITTER_BEARER_TOKEN
+        sync: false
+      - key: BLUESKY_IDENTIFIER
+        sync: false
+      - key: BLUESKY_PASSWORD
+        sync: false
+
+  # Frontend Web Service
+  - type: web
+    name: disaster-manage-frontend
+    env: static
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build
+    staticPublishPath: frontend/build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://disaster-manage-backend.onrender.com
+      - key: REACT_APP_WS_URL
+        value: wss://disaster-manage-backend.onrender.com

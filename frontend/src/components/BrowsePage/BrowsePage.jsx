@@ -17,7 +17,9 @@ import {
   AlertTriangle,
   TrendingUp,
   Calendar,
-  MapPin
+  MapPin,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import toast from 'react-hot-toast';
@@ -25,11 +27,12 @@ import toast from 'react-hot-toast';
 const BrowsePage = () => {
   const { officialUpdates } = useApi();
   const [updates, setUpdates] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [filterSource, setFilterSource] = useState('all');
-  const [filterSeverity, setFilterSeverity] = useState('all');
-  const [filterCategory, setFilterCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredUpdates, setFilteredUpdates] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSource, setSelectedSource] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
   const [availableSources, setAvailableSources] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -44,25 +47,30 @@ const BrowsePage = () => {
     loadAvailableSources();
   }, []);
 
+  useEffect(() => {
+    filterUpdates();
+  }, [updates, searchTerm, selectedSource, selectedStatus]);
+
   const loadOfficialUpdates = async () => {
-    setLoading(true);
     try {
-      const response = await officialUpdates.search({
-        q: searchQuery || undefined,
-        sources: filterSource !== 'all' ? filterSource : undefined,
+      setLoading(true);
+      const data = await officialUpdates.search({
+        q: searchTerm || undefined,
+        sources: selectedSource !== 'all' ? selectedSource : undefined,
         limit: 100
       });
 
-      if (response.success && response.data.results) {
-        setUpdates(response.data.results);
-        calculateStats(response.data.results);
+      if (data.success && data.data.results) {
+        setUpdates(data.data.results);
+        calculateStats(data.data.results);
+        setError(null);
         toast.success('Official updates loaded');
       } else {
         toast.error('Failed to load official updates');
       }
-    } catch (error) {
-      console.error('Error loading official updates:', error);
-      toast.error('Error loading official updates');
+    } catch (err) {
+      console.error('Error loading official updates:', err);
+      setError('Failed to load official updates');
     } finally {
       setLoading(false);
     }
@@ -79,25 +87,29 @@ const BrowsePage = () => {
     }
   };
 
-  const loadCategoryUpdates = async (category) => {
-    setLoading(true);
-    try {
-      const response = await officialUpdates.getByCategory(category, {
-        sources: filterSource !== 'all' ? filterSource : undefined,
-        limit: 100
-      });
+  const filterUpdates = () => {
+    let filtered = [...updates];
 
-      if (response.success && response.data.updates) {
-        setUpdates(response.data.updates);
-        calculateStats(response.data.updates);
-        toast.success(`${category} updates loaded`);
-      }
-    } catch (error) {
-      console.error('Error loading category updates:', error);
-      toast.error('Error loading category updates');
-    } finally {
-      setLoading(false);
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(update =>
+        update.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        update.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        update.source.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
+
+    // Filter by source
+    if (selectedSource !== 'all') {
+      filtered = filtered.filter(update => update.source === selectedSource);
+    }
+
+    // Filter by status
+    if (selectedStatus !== 'all') {
+      filtered = filtered.filter(update => update.status === selectedStatus);
+    }
+
+    setFilteredUpdates(filtered);
   };
 
   const calculateStats = (updatesData) => {
@@ -111,17 +123,41 @@ const BrowsePage = () => {
     setStats(statsData);
   };
 
-  const filteredUpdates = updates.filter(update => {
-    const matchesSearch = !searchQuery ||
-      update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      update.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      update.source.toLowerCase().includes(searchQuery.toLowerCase());
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'active':
+        return <AlertTriangle className="w-4 h-4 text-orange-500" />;
+      case 'resolved':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'expired':
+        return <XCircle className="w-4 h-4 text-gray-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-blue-500" />;
+    }
+  };
 
-    const matchesSeverity = filterSeverity === 'all' || update.severity === filterSeverity;
-    const matchesCategory = filterCategory === 'all' || update.category === filterCategory;
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'resolved':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'expired':
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+  };
 
-    return matchesSearch && matchesSeverity && matchesCategory;
-  });
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   const getSeverityColor = (severity) => {
     switch (severity) {
@@ -189,8 +225,34 @@ const BrowsePage = () => {
     { key: 'supplies', label: 'Emergency Supplies', icon: FileText, color: 'purple' }
   ];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Updates</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={loadOfficialUpdates}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -228,9 +290,9 @@ const BrowsePage = () => {
           {severityOptions.map((option) => (
             <button
               key={option.value}
-              onClick={() => setFilterSeverity(option.value)}
+              onClick={() => setSelectedStatus(option.value)}
               className={`p-4 rounded-lg border text-center transition-colors ${
-                filterSeverity === option.value
+                selectedStatus === option.value
                   ? 'border-green-500 bg-green-50 text-green-700'
                   : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
               }`}
@@ -245,9 +307,9 @@ const BrowsePage = () => {
           {quickCategories.map((category) => (
             <button
               key={category.key}
-              onClick={() => loadCategoryUpdates(category.key)}
+              onClick={() => setSelectedSource(category.key)}
               className={`p-4 rounded-lg border-2 border-dashed transition-all hover:border-solid hover:shadow-md ${
-                filterCategory === category.key
+                selectedSource === category.key
                   ? `border-${category.color}-500 bg-${category.color}-50`
                   : 'border-gray-300 hover:border-gray-400'
               }`}
@@ -265,8 +327,8 @@ const BrowsePage = () => {
               <input
                 type="text"
                 placeholder="Search official updates by title, content, or source..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               />
             </div>
@@ -275,8 +337,8 @@ const BrowsePage = () => {
           <div className="flex items-center space-x-3">
             <Filter className="w-4 h-4 text-gray-500" />
             <select
-              value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value)}
+              value={selectedSource}
+              onChange={(e) => setSelectedSource(e.target.value)}
               className="border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500"
             >
               <option value="all">All Sources</option>
@@ -288,15 +350,14 @@ const BrowsePage = () => {
             </select>
 
             <select
-              value={filterCategory}
-              onChange={(e) => setFilterCategory(e.target.value)}
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
               className="border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500"
             >
-              {categoryOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="resolved">Resolved</option>
+              <option value="expired">Expired</option>
             </select>
 
             <button
@@ -357,7 +418,7 @@ const BrowsePage = () => {
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-4">
-                      {getSourceIcon(update.source)}
+                      {getStatusIcon(update.status)}
                       <div>
                         <h3 className="font-semibold text-gray-900 text-lg">{update.source}</h3>
                         <div className="flex items-center text-sm text-gray-500 mt-1">
@@ -420,7 +481,7 @@ const BrowsePage = () => {
               <Globe className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No official updates found</h3>
               <p className="text-gray-500 mb-6">
-                {searchQuery || filterSource !== 'all' || filterCategory !== 'all'
+                {searchTerm || selectedSource !== 'all' || selectedStatus !== 'all'
                   ? 'Try adjusting your search or filter criteria'
                   : 'Official updates from government agencies will appear here'
                 }

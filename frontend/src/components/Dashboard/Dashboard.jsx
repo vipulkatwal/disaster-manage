@@ -219,7 +219,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
             <StatCard title="Urgent Events" value={stats.urgentEvents} description="+5% vs last week" icon={Zap} gradient="from-orange-400 to-yellow-400" />
             <StatCard title="Active Resources" value={stats.activeResources} description="+8% vs last week" icon={Shield} gradient="from-green-500 to-teal-500" />
             <StatCard title="Recent Reports" value={stats.recentReports} description="+15% vs last week" icon={FileText} gradient="from-blue-500 to-indigo-500" />
-          </div>
+      </div>
 
           {/* Recent Disasters Table */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200/80">
@@ -245,12 +245,12 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                         <div className="flex items-center space-x-3">
                           <div className={`w-5 h-5 rounded-full flex items-center justify-center ${getPriorityPill(disaster.priority).iconBg}`}>
                             <AlertTriangle className={`w-3 h-3 ${getPriorityPill(disaster.priority).iconColor}`} />
-                          </div>
+          </div>
                           <div>
                             <div>{disaster.title}</div>
                             <div className="text-xs text-gray-400 font-normal truncate max-w-xs">{disaster.description}</div>
-                          </div>
-                        </div>
+                      </div>
+                    </div>
                       </th>
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-2">
@@ -271,9 +271,9 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
           </div>
-        </div>
+            </div>
 
         {/* Right Sidebar */}
         <div className="space-y-8">
@@ -311,7 +311,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
               </Link>
             </div>
           )}
-        </div>
+          </div>
       </div>
 
       {selectedDisaster && (
@@ -378,7 +378,7 @@ const Dashboard = ({ disasters, selectedDisaster, onDisasterSelect, user }) => {
           </motion.div>
         </div>
       )}
-    </div>
+            </div>
   );
 };
 
@@ -389,20 +389,20 @@ const StatCard = ({ title, value, description, icon: Icon, gradient }) => (
       <div>
         <p className="font-semibold text-white/90">{title}</p>
         <p className="text-4xl font-bold mt-2">{value}</p>
-      </div>
+                        </div>
       <div className="p-2 bg-black/20 rounded-lg">
         <Icon className="w-6 h-6" />
-      </div>
-    </div>
+                        </div>
+                      </div>
     <p className="text-sm opacity-80 mt-2">{description}</p>
-  </div>
+                      </div>
 );
 
 const QuickAction = ({ title, description, icon: Icon, link }) => (
   <Link to={link} className="flex items-center space-x-4 p-3 -m-3 rounded-lg hover:bg-gray-100 transition-colors group">
     <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors">
       <Icon className="w-5 h-5 text-gray-600" />
-    </div>
+          </div>
     <div>
       <p className="font-semibold text-gray-800">{title}</p>
       <p className="text-xs text-gray-500">{description}</p>
@@ -425,8 +425,8 @@ const SystemStatusItem = ({ label, status }) => {
                 <div className={`w-2.5 h-2.5 rounded-full ${statusStyles[status] || 'bg-gray-500'}`}></div>
                 <span className="font-medium text-gray-700">{status}</span>
             </div>
-        </div>
-    );
+    </div>
+  );
 };
 
 const getPriorityPill = (priority) => {
