@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import toast from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 
 import Header from './components/Layout/Header';
 import Sidebar from './components/Layout/Sidebar';
+import Footer from './components/Layout/Footer';
 import Dashboard from './components/Dashboard/Dashboard';
 import DisasterForm from './components/DisasterForm/DisasterForm';
 import DisasterList from './components/DisasterList/DisasterList';
@@ -148,6 +149,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       <Header
         user={user}
         connected={connected}
@@ -226,6 +228,7 @@ function App() {
           </Routes>
         </main>
       </div>
+      <Footer />
       <AnimatePresence>
         {!connected && (
           <motion.div

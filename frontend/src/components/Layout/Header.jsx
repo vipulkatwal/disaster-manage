@@ -13,7 +13,8 @@ import {
   Globe,
   LayoutDashboard,
   List,
-  Map
+  Map,
+  BellRingIcon
 } from 'lucide-react';
 
 const Header = ({ user, connected, onMenuClick }) => {
@@ -53,16 +54,16 @@ const Header = ({ user, connected, onMenuClick }) => {
     <motion.header
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="bg-slate-100/80 backdrop-blur-lg border-b border-slate-200/60 shadow-sm sticky top-0 z-50"
+      className="bg-slate-900/80 backdrop-blur-xl border-b border-slate-700/50 shadow-lg sticky top-0 z-50"
     >
-      <div className="w-full px-3 sm:px-4 lg:px-6">
-        <div className="flex justify-between items-center h-16">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-20">
           {/* Left Section - Logo */}
           <div className="flex items-center space-x-2 min-w-0">
             {/* Mobile Menu Button */}
             <button
               onClick={onMenuClick}
-              className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200 lg:hidden flex-shrink-0"
+              className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 lg:hidden flex-shrink-0"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -71,23 +72,23 @@ const Header = ({ user, connected, onMenuClick }) => {
             <Link to="/" className="flex items-center space-x-2 group min-w-0">
               <div className="relative flex-shrink-0">
                 <div className="w-8 h-8 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300">
-                  <Shield className="w-4 h-4 text-white" />
+                  <BellRingIcon className="w-4 h-4 text-white" />
                 </div>
                 <div className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white animate-pulse"></div>
               </div>
 
               <div className="hidden sm:block min-w-0">
                 <h1 className="text-lg font-bold bg-gradient-to-r from-red-600 to-orange-600 bg-clip-text text-transparent whitespace-nowrap">
-                  Emergency Response
+                  Geo Aid+
                 </h1>
-                <p className="text-xs text-gray-500 -mt-0.5 whitespace-nowrap">Coordination Platform</p>
+                <p className="text-xs text-slate-400 -mt-0.5 whitespace-nowrap">Coordination Platform</p>
               </div>
             </Link>
           </div>
 
           {/* Center Navigation */}
           <nav className="hidden lg:flex items-center justify-center flex-1 max-w-2xl mx-4">
-            <div className="flex items-center space-x-2 bg-white/40 border border-white/50 shadow-inner rounded-full p-1.5">
+            <div className="flex items-center space-x-2 bg-slate-800/50 border border-slate-700 shadow-inner rounded-full p-1.5">
               {navItems.map((item) => (
                 <NavLink key={item.to} to={item.to}>
                   <item.icon className="w-4 h-4" />
@@ -102,8 +103,8 @@ const Header = ({ user, connected, onMenuClick }) => {
             {/* Connection Status */}
             <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-200 ${
               connected
-                ? 'bg-green-100 text-green-800'
-                : 'bg-red-100 text-red-800'
+                ? 'bg-green-500/10 text-green-400'
+                : 'bg-red-500/10 text-red-400'
             }`}>
               {connected ? (
                 <>
@@ -129,37 +130,37 @@ const Header = ({ user, connected, onMenuClick }) => {
             </Link>
 
             {/* Notifications */}
-            <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200">
+            <button className="relative p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-all duration-200">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
 
             {/* User Menu */}
             <div className="relative group">
-              <button className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-gray-100 transition-all duration-200">
+              <button className="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-800 transition-all duration-200">
                 <div className="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-white" />
                 </div>
                 <div className="hidden xl:block text-left">
-                  <p className="text-sm font-medium text-gray-900">{user?.name || 'Coordinator'}</p>
-                  <p className="text-xs text-gray-500 capitalize">{user?.role || 'admin'}</p>
+                  <p className="text-sm font-medium text-slate-200">{user?.name || 'Coordinator'}</p>
+                  <p className="text-xs text-slate-400 capitalize">{user?.role || 'admin'}</p>
                 </div>
               </button>
 
               {/* User Dropdown */}
-              <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+              <div className="absolute right-0 top-full mt-2 w-48 bg-slate-800/90 backdrop-blur-md rounded-xl shadow-lg border border-slate-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="p-2">
-                  <div className="px-3 py-2 border-b border-gray-100">
-                    <p className="font-medium text-gray-900">{user?.name || 'Emergency Coordinator'}</p>
-                    <p className="text-sm text-gray-500">{user?.username || 'netrunnerX'}</p>
+                  <div className="px-3 py-2 border-b border-slate-700">
+                    <p className="font-medium text-slate-200">{user?.name || 'Emergency Coordinator'}</p>
+                    <p className="text-sm text-slate-400">{user?.username || 'netrunnerX'}</p>
                   </div>
-                  <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                  <button className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 rounded-lg transition-colors">
                     Profile Settings
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
+                  <button className="w-full text-left px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 rounded-lg transition-colors">
                     Preferences
                   </button>
-                  <button className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                  <button className="w-full text-left px-3 py-2 text-sm text-red-400 hover:bg-red-500/20 rounded-lg transition-colors">
                     Sign Out
                   </button>
                 </div>
@@ -170,8 +171,8 @@ const Header = ({ user, connected, onMenuClick }) => {
       </div>
 
       {/* Mobile Page Title */}
-      <div className="lg:hidden px-4 pb-3 border-t border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-900">{getPageTitle()}</h2>
+      <div className="lg:hidden px-4 pb-3 border-t border-slate-800">
+        <h2 className="text-lg font-semibold text-slate-100">{getPageTitle()}</h2>
       </div>
     </motion.header>
   );
@@ -181,10 +182,10 @@ const NavLink = ({ to, children }) => (
   <RouterNavLink
     to={to}
     className={({ isActive }) =>
-      `flex items-center space-x-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-100 ${
+      `flex items-center space-x-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
         isActive
           ? 'bg-white text-gray-900 shadow-md'
-          : 'text-slate-600 hover:bg-white/70 hover:text-slate-900'
+          : 'text-slate-300 hover:bg-slate-700/50 hover:text-white'
       }`
     }
   >
