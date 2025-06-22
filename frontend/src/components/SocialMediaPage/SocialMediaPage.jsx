@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import {
-  MessageCircle,
-  RefreshCw,
-  Filter,
+import { 
+  MessageCircle, 
+  RefreshCw, 
+  Filter, 
   Search,
   AlertTriangle,
   Clock,
@@ -21,14 +21,9 @@ import toast from 'react-hot-toast';
 const SocialMediaPage = () => {
   const { socialMedia } = useApi();
   const [posts, setPosts] = useState([]);
-  const [filteredPosts, setFilteredPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPlatform, setSelectedPlatform] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [filterPriority, setFilterPriority] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedDisasterType, setSelectedDisasterType] = useState('');
   const [stats, setStats] = useState({
     total: 0,
@@ -39,67 +34,31 @@ const SocialMediaPage = () => {
   });
 
   useEffect(() => {
-    loadSocialMediaPosts();
+    loadMockSocialMediaPosts();
+  }, []);
 
-    // Auto-refresh every 30 seconds if enabled
-    let interval;
-    if (autoRefresh) {
-      interval = setInterval(loadSocialMediaPosts, 30000);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [autoRefresh]);
-
-  useEffect(() => {
-    filterPosts();
-  }, [posts, searchTerm, selectedPlatform, selectedCategory]);
-
-  const loadSocialMediaPosts = async () => {
+  const loadMockSocialMediaPosts = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await socialMedia.getMockData({
-        keywords: searchTerm,
+      const response = await socialMedia.getMockData({
+        keywords: searchQuery,
         disaster_type: selectedDisasterType,
         limit: 100
       });
-      setPosts(data.data.posts);
-      calculateStats(data.data.posts);
-      setError(null);
-      toast.success('Social media feeds loaded');
-    } catch (err) {
-      console.error('Error loading social media posts:', err);
-      setError('Failed to load social media posts');
+      
+      if (response.success && response.data.posts) {
+        setPosts(response.data.posts);
+        calculateStats(response.data.posts);
+        toast.success('Social media feeds loaded');
+      } else {
+        toast.error('Failed to load social media posts');
+      }
+    } catch (error) {
+      console.error('Error loading social media posts:', error);
       toast.error('Error loading social media feeds');
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterPosts = () => {
-    let filtered = [...posts];
-
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(post =>
-        post.post.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.location_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filter by platform
-    if (selectedPlatform !== 'all') {
-      filtered = filtered.filter(post => post.platform === selectedPlatform);
-    }
-
-    // Filter by category
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(post => post.category === selectedCategory);
-    }
-
-    setFilteredPosts(filtered);
   };
 
   const calculateStats = (postsData) => {
@@ -113,66 +72,13 @@ const SocialMediaPage = () => {
     setStats(statsData);
   };
 
-  const getPlatformIcon = (platform) => {
-    switch (platform.toLowerCase()) {
-      case 'twitter':
-        return <div className="w-6 h-6 bg-blue-400 rounded-full flex items-center justify-center text-white text-xs font-bold">T</div>;
-      case 'facebook':
-        return <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">F</div>;
-      case 'instagram':
-        return <div className="w-6 h-6 bg-pink-500 rounded-full flex items-center justify-center text-white text-xs font-bold">I</div>;
-      case 'bluesky':
-        return <div className="w-6 h-6 bg-sky-500 rounded-full flex items-center justify-center text-white text-xs font-bold">B</div>;
-      default:
-        return <MessageCircle className="w-6 h-6 text-gray-400" />;
-    }
-  };
-
-  const getCategoryColor = (category) => {
-    switch (category) {
-      case 'emergency':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'information':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'support':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'update':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getSentimentColor = (sentiment) => {
-    switch (sentiment) {
-      case 'positive':
-        return 'text-green-600';
-      case 'negative':
-        return 'text-red-600';
-      case 'neutral':
-        return 'text-gray-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
-
-    if (diffInMinutes < 1) return 'Just now';
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const getAvatarFallback = (username) => {
-    if (!username || typeof username !== 'string' || username.length === 0) {
-      return '?';
-    }
-    return username.charAt(0).toUpperCase();
-  };
+  const filteredPosts = posts.filter(post => {
+    const matchesPriority = filterPriority === 'all' || post.priority === filterPriority;
+    const matchesSearch = !searchQuery || 
+      post.post.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.user.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesPriority && matchesSearch;
+  });
 
   const getPriorityColor = (priority) => {
     switch (priority) {
@@ -219,247 +125,250 @@ const SocialMediaPage = () => {
     { value: 'tornado', label: 'Tornado' }
   ];
 
-  if (loading && posts.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <h1 className="text-3xl font-bold text-gray-800 flex items-center space-x-3">
-              <MessageCircle className="w-8 h-8 text-blue-600" />
-              <span>Social Media Monitoring</span>
-            </h1>
-            <p className="text-gray-500 mt-1">Real-time social media posts and alerts for disaster response</p>
-          </div>
+    <div className="max-w-7xl mx-auto space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center space-x-3">
+            <MessageCircle className="w-8 h-8 text-blue-600" />
+            <span>Social Media Monitoring</span>
+          </h1>
+          <p className="text-gray-600 mt-1">
+            Real-time social media posts and alerts for disaster response
+          </p>
+        </div>
+        
+        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <button
-            onClick={loadSocialMediaPosts}
+            onClick={loadMockSocialMediaPosts}
             disabled={loading}
-            className="flex items-center space-x-2 px-4 py-2 mt-4 sm:mt-0 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh Feed</span>
           </button>
-        </motion.div>
+        </div>
+      </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl shadow-sm border border-gray-200/80 p-5"
-        >
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
-            {priorityOptions.map(option => (
-              <button
-                key={option.value}
-                onClick={() => setFilterPriority(option.value)}
-                className={`p-4 rounded-lg border text-center transition-all duration-200 ${
-                  filterPriority === option.value
-                    ? 'border-blue-500 bg-blue-50 shadow-sm'
-                    : 'border-gray-200 bg-gray-50 hover:bg-gray-100 hover:border-gray-300'
-                }`}
-              >
-                <div className="text-2xl font-bold text-gray-800">{option.count}</div>
-                <div className="text-sm font-medium text-gray-600">{option.label}</div>
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-            <div className="flex-grow relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+      >
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          {priorityOptions.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => setFilterPriority(option.value)}
+              className={`p-4 rounded-lg border text-center transition-colors ${
+                filterPriority === option.value
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <div className="text-2xl font-bold">{option.count}</div>
+              <div className="text-sm">{option.label}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-col lg:flex-row lg:items-center space-y-4 lg:space-y-0 lg:space-x-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search posts by content, user, or hashtags..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
-            <div className="flex items-center space-x-3">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={selectedPlatform}
-                onChange={(e) => setSelectedPlatform(e.target.value)}
-                className="border border-gray-300 rounded-lg px-4 py-3 w-full md:w-auto bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Platforms</option>
-                <option value="twitter">Twitter</option>
-                <option value="facebook">Facebook</option>
-                <option value="instagram">Instagram</option>
-                <option value="bluesky">Bluesky</option>
-              </select>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="border border-gray-300 rounded-lg px-4 py-3 w-full md:w-auto bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="emergency">Emergency</option>
-                <option value="information">Information</option>
-                <option value="support">Support</option>
-                <option value="update">Update</option>
-              </select>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={selectedDisasterType}
-                onChange={(e) => setSelectedDisasterType(e.target.value)}
-                className="border border-gray-300 rounded-lg px-4 py-3 w-full md:w-auto bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {disasterTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Filter className="w-5 h-5 text-gray-400" />
-              <select
-                value={autoRefresh ? 'auto' : 'manual'}
-                onChange={(e) => setAutoRefresh(e.target.value === 'auto')}
-                className="border border-gray-300 rounded-lg px-4 py-3 w-full md:w-auto bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="auto">Auto-refresh</option>
-                <option value="manual">Manual</option>
-              </select>
-            </div>
           </div>
-        </motion.div>
+          
+          <div className="flex items-center space-x-3">
+            <Filter className="w-4 h-4 text-gray-500" />
+            <select
+              value={selectedDisasterType}
+              onChange={(e) => setSelectedDisasterType(e.target.value)}
+              className="border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {disasterTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
+            </select>
+            
+            <select
+              value={filterPriority}
+              onChange={(e) => setFilterPriority(e.target.value)}
+              className="border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {priorityOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label} ({option.count})
+                </option>
+              ))}
+            </select>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="mb-4">
-            <h2 className="text-xl font-bold text-gray-800">Live Social Media Feed</h2>
-            <p className="text-gray-500 mt-1">Showing {filteredPosts.length} posts filtered by priority and keywords</p>
+            <button
+              onClick={loadMockSocialMediaPosts}
+              className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Apply Filters
+            </button>
           </div>
+        </div>
+      </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-            {loading
-              ? Array(6).fill(0).map((_, i) => <PostCardSkeleton key={i} />)
-              : filteredPosts.map(post => <PostCard key={post.id} post={post} />)
-            }
-          </div>
-        </motion.div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white rounded-xl shadow-sm border border-gray-200"
+      >
+        <div className="p-6 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Live Social Media Feed</h2>
+          <p className="text-sm text-gray-600 mt-1">
+            Showing {filteredPosts.length} posts filtered by priority and keywords
+          </p>
+        </div>
+
+        <div className="p-6">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <RefreshCw className="w-12 h-12 text-blue-500 animate-spin mx-auto mb-4" />
+                <p className="text-gray-600 text-lg">Loading social media posts...</p>
+                <p className="text-gray-500 text-sm mt-2">Fetching latest disaster-related content</p>
+              </div>
+            </div>
+          ) : filteredPosts.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {filteredPosts.map((post, index) => (
+                <motion.div
+                  key={post.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                        {post.user.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">@{post.user}</p>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="w-4 h-4 mr-1" />
+                          {getTimeAgo(post.timestamp)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full border ${getPriorityColor(post.priority)}`}>
+                      {post.priority.toUpperCase()}
+                    </span>
+                  </div>
+
+                  <p className="text-gray-800 mb-4 leading-relaxed text-sm">
+                    {post.post}
+                  </p>
+
+                  {post.location && (
+                    <div className="flex items-center text-sm text-gray-600 mb-4">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      <span className="font-medium">{post.location}</span>
+                    </div>
+                  )}
+
+                  {extractHashtags(post.post).length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {extractHashtags(post.post).map((hashtag, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                        >
+                          <Tag className="w-3 h-3 mr-1" />
+                          {hashtag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div className="flex items-center space-x-6 text-sm text-gray-500">
+                      <button className="flex items-center space-x-2 hover:text-red-600 transition-colors">
+                        <Heart className="w-4 h-4" />
+                        <span>{Math.floor(Math.random() * 100)}</span>
+                      </button>
+                      
+                      <button className="flex items-center space-x-2 hover:text-blue-600 transition-colors">
+                        <Share className="w-4 h-4" />
+                        <span>Share</span>
+                      </button>
+
+                      <button className="flex items-center space-x-2 hover:text-green-600 transition-colors">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>Report</span>
+                      </button>
+                    </div>
+
+                    {post.verified && (
+                      <span className="flex items-center text-xs text-green-600 font-medium">
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        Verified
+                      </span>
+                    )}
+                  </div>
+
+                  {post.relevance_score && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                        <span>Relevance Score</span>
+                        <span className="font-semibold">{post.relevance_score}/10</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                          style={{ width: `${(post.relevance_score / 10) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No social media posts found</h3>
+              <p className="text-gray-500 mb-6">
+                {searchQuery || filterPriority !== 'all' 
+                  ? 'Try adjusting your search or filter criteria' 
+                  : 'Social media feeds will appear here when available'
+                }
+              </p>
+              <button
+                onClick={loadMockSocialMediaPosts}
+                className="inline-flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
+              >
+                <RefreshCw className="w-5 h-5" />
+                <span>Load Sample Data</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 };
-
-const PostCard = ({ post }) => {
-  const getAvatarFallback = (username) => (!username || typeof username !== 'string' || username.length === 0) ? '?' : username.charAt(0).toUpperCase();
-  const getPriorityStyling = (priority) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-700';
-      case 'high': return 'bg-orange-100 text-orange-700';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
-  const getTimeAgo = (timestamp) => {
-    if (!timestamp) return '...';
-    const now = new Date();
-    const created = new Date(timestamp);
-    const diffMs = now - created;
-    const diffMins = Math.round(diffMs / 60000);
-    if (diffMins < 60) return `${diffMins}m ago`;
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${Math.floor(diffHours / 24)}d ago`;
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 p-5 flex flex-col h-full">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
-            {getAvatarFallback(post.user)}
-          </div>
-          <div>
-            <p className="font-semibold text-gray-800">@{post.user || 'anonymous'}</p>
-            <p className="text-xs text-gray-500 flex items-center"><Clock className="w-3 h-3 mr-1" />{getTimeAgo(post.timestamp)}</p>
-          </div>
-        </div>
-        {post.priority && (
-          <div className={`px-2.5 py-1 text-xs font-semibold rounded-full ${getPriorityStyling(post.priority)}`}>
-            {post.priority.toUpperCase()}
-          </div>
-        )}
-      </div>
-
-      <p className="text-gray-700 text-sm mb-3 flex-grow">{post.post}</p>
-
-      {post.location_name && (
-        <div className="flex items-center space-x-2 text-sm text-gray-600 mb-3">
-          <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-          <span>{post.location_name}</span>
-        </div>
-      )}
-
-      {post.hashtags && post.hashtags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {post.hashtags.map(tag => (
-            <div key={tag} className="flex items-center space-x-1 bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs">
-              <Tag className="w-3 h-3" />
-              <span>{tag.replace('#','')}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="border-t border-gray-200/80 pt-3 mt-auto flex justify-between items-center text-sm text-gray-500">
-        <button className="flex items-center space-x-2 hover:text-red-500 transition-colors"><Heart className="w-4 h-4" /><span>{post.likes || 0}</span></button>
-        <button className="flex items-center space-x-2 hover:text-blue-500 transition-colors"><Share className="w-4 h-4" /><span>Share</span></button>
-        <button className="flex items-center space-x-2 hover:text-orange-500 transition-colors"><AlertTriangle className="w-4 h-4" /><span>Report</span></button>
-      </div>
-    </div>
-  );
-};
-
-const PostCardSkeleton = () => (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200/80 p-5 animate-pulse">
-        <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-gray-200"></div>
-                <div>
-                    <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
-                    <div className="h-3 bg-gray-200 rounded w-16"></div>
-                </div>
-            </div>
-            <div className="h-5 bg-gray-200 rounded-full w-20"></div>
-        </div>
-        <div className="space-y-2 mb-4">
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-        </div>
-        <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-        <div className="flex gap-2 mb-4">
-            <div className="h-5 bg-gray-200 rounded-full w-20"></div>
-            <div className="h-5 bg-gray-200 rounded-full w-24"></div>
-        </div>
-        <div className="border-t border-gray-200/80 pt-3 mt-auto flex justify-between items-center">
-            <div className="h-5 bg-gray-200 rounded w-12"></div>
-            <div className="h-5 bg-gray-200 rounded w-16"></div>
-            <div className="h-5 bg-gray-200 rounded w-16"></div>
-        </div>
-    </div>
-);
 
 export default SocialMediaPage;

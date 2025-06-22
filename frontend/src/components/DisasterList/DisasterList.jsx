@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  Filter,
-  Plus,
-  AlertTriangle,
-  MapPin,
-  Clock,
-  Eye,
-  FileText,
+import { 
+  Search, 
+  Filter, 
+  Plus, 
+  AlertTriangle, 
+  MapPin, 
+  Clock, 
+  Eye, 
+  FileText, 
   MoreVertical,
   RefreshCw,
   Download,
@@ -136,8 +136,8 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
   };
 
   const handleSelectItem = (disasterId) => {
-    setSelectedItems(prev =>
-      prev.includes(disasterId)
+    setSelectedItems(prev => 
+      prev.includes(disasterId) 
         ? prev.filter(id => id !== disasterId)
         : [...prev, disasterId]
     );
@@ -158,7 +158,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
     }
 
     const selectedDisasters = filteredDisasters.filter(d => selectedItems.includes(d.id));
-
+    
     const csvHeaders = ['Title', 'Location', 'Description', 'Priority', 'Tags', 'Created Date', 'Owner', 'Social Media Posts', 'Official Updates'];
     const csvData = selectedDisasters.map(disaster => [
       disaster.title,
@@ -216,7 +216,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
               tags: [...(disaster.tags || []), 'archived'],
               status: 'archived'
             });
-
+            
             if (response.success) {
               successCount++;
             } else {
@@ -274,7 +274,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
       for (const disasterId of selectedItems) {
         try {
           const response = await disasterApi.delete(disasterId);
-
+          
           if (response.success) {
             successCount++;
           } else {
@@ -362,7 +362,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
             Monitor and manage all disaster reports ({filteredDisasters.length} of {disasters.length})
           </p>
         </div>
-
+        
         <div className="flex items-center space-x-3 mt-4 sm:mt-0">
           <button
             onClick={handleRefresh}
@@ -372,7 +372,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
-
+          
           <Link
             to="/disasters/new"
             className="flex items-center space-x-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105"
@@ -431,7 +431,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
                   </option>
                 ))}
               </select>
-
+              
               <button
                 onClick={() => setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc')}
                 className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -476,7 +476,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
                   <Download className="w-4 h-4" />
                   <span>Export Selected</span>
                 </button>
-
+                
                 <button
                   onClick={handleArchiveSelected}
                   disabled={bulkActionLoading}
@@ -489,7 +489,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
                   )}
                   <span>Archive</span>
                 </button>
-
+                
                 <button
                   onClick={handleDeleteSelected}
                   disabled={bulkActionLoading}
@@ -502,7 +502,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
                   )}
                   <span>Delete</span>
                 </button>
-
+                
                 <button
                   onClick={() => setSelectedItems([])}
                   className="flex items-center space-x-1 px-3 py-1 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200 transition-colors"
@@ -611,7 +611,7 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
             <AlertTriangle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No disasters found</h3>
             <p className="text-gray-500 mb-6">
-              {searchQuery || activeFilter !== 'all'
+              {searchQuery || activeFilter !== 'all' 
                 ? 'Try adjusting your search or filter criteria'
                 : 'Get started by reporting your first emergency'
               }
@@ -632,12 +632,12 @@ const DisasterList = ({ disasters, onDisasterSelect, selectedDisaster }) => {
   );
 };
 
-const DisasterCard = ({
-  disaster,
-  index,
-  selectedDisaster,
-  onDisasterSelect,
-  onSelectItem,
+const DisasterCard = ({ 
+  disaster, 
+  index, 
+  selectedDisaster, 
+  onDisasterSelect, 
+  onSelectItem, 
   isSelected,
   getPriorityColor,
   getPriorityLabel,
@@ -664,7 +664,7 @@ const DisasterCard = ({
             {getPriorityLabel(disaster.tags)}
           </span>
         </div>
-
+        
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
@@ -687,7 +687,7 @@ const DisasterCard = ({
       <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
         {disaster.title}
       </h3>
-
+      
       <p className="text-sm text-gray-600 mb-4 line-clamp-3">
         {disaster.description}
       </p>
@@ -757,12 +757,12 @@ const DisasterCard = ({
   </motion.div>
 );
 
-const DisasterRow = ({
-  disaster,
-  index,
-  selectedDisaster,
-  onDisasterSelect,
-  onSelectItem,
+const DisasterRow = ({ 
+  disaster, 
+  index, 
+  selectedDisaster, 
+  onDisasterSelect, 
+  onSelectItem, 
   isSelected,
   getPriorityColor,
   getPriorityLabel,
@@ -790,7 +790,7 @@ const DisasterRow = ({
         className="rounded border-gray-300 text-red-600 focus:ring-red-500"
       />
     </td>
-
+    
     <td className="px-6 py-4">
       <div className="flex items-center">
         <AlertTriangle className={`w-5 h-5 mr-3 ${
@@ -802,7 +802,7 @@ const DisasterRow = ({
         </div>
       </div>
     </td>
-
+    
     <td className="px-6 py-4 whitespace-nowrap">
       {disaster.location_name ? (
         <div className="flex items-center text-sm text-gray-900">
@@ -813,7 +813,7 @@ const DisasterRow = ({
         <span className="text-sm text-gray-500">Unknown</span>
       )}
     </td>
-
+    
     <td className="px-6 py-4 whitespace-nowrap">
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
         disaster.tags?.includes('critical') ? 'bg-red-200 text-red-800' :
@@ -840,14 +840,14 @@ const DisasterRow = ({
         <span>{officialUpdateCount}</span>
       </div>
     </td>
-
+    
     <td className="px-6 py-4 whitespace-nowrap">
       <div className="flex items-center text-sm text-gray-500">
         <Clock className="w-4 h-4 mr-1" />
         {getTimeAgo(disaster.created_at)}
       </div>
     </td>
-
+    
     <td className="px-6 py-4 whitespace-nowrap">
       <div className="flex items-center space-x-2">
         <Link
