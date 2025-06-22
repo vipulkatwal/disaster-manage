@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { 
-  Map as MapIcon, 
-  Layers, 
-  Search, 
+import {
+  Map as MapIcon,
+  Layers,
+  Search,
   Filter,
   Navigation,
   AlertTriangle,
@@ -47,8 +47,8 @@ const createCustomIcon = (color, icon, size = 40) => {
         position: relative;
       ">
         <div style="
-          transform: rotate(45deg); 
-          color: white; 
+          transform: rotate(45deg);
+          color: white;
           font-weight: bold;
           text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
         ">
@@ -73,7 +73,7 @@ const userLocationIcon = createCustomIcon('#8b5cf6', '📍', 30);
 
 const MapController = ({ center, zoom, onMapReady }) => {
   const map = useMap();
-  
+
   useEffect(() => {
     if (center && center.length === 2 && !isNaN(center[0]) && !isNaN(center[1])) {
       map.setView(center, zoom);
@@ -95,14 +95,19 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
     parseFloat(process.env.REACT_APP_MAP_DEFAULT_CENTER_LNG) || -74.0060
   ]);
   const [mapZoom, setMapZoom] = useState(parseInt(process.env.REACT_APP_MAP_DEFAULT_ZOOM) || 12);
-  const [searchRadius, setSearchRadius] = useState(10000); 
+  const [searchRadius, setSearchRadius] = useState(10000);
   const [userLocation, setUserLocation] = useState(null);
   const [mapInstance, setMapInstance] = useState(null);
 
-  
+
   useEffect(() => {
-    loadResourcesFromBackend();
-  }, [disasters, mapCenter, searchRadius]);
+    if (selectedDisaster) {
+      loadResourcesForDisaster(selectedDisaster);
+    } else {
+      // Potentially clear resources if no disaster is selected
+      setMapResources([]);
+    }
+  }, [selectedDisaster]);
 
   useEffect(() => {
     if (selectedDisaster) {
@@ -111,7 +116,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
         setMapCenter([coords.lat, coords.lng]);
         setMapZoom(14);
       } else if (selectedDisaster.location_name) {
-       
+
         geocodeLocationName(selectedDisaster.location_name);
       }
     }
@@ -119,7 +124,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
 
   const parseLocationCoordinates = (location) => {
     if (typeof location === 'string') {
-     
+
       const match = location.match(/POINT\(([^)]+)\)/);
       if (match) {
         const [lng, lat] = match[1].split(' ').map(parseFloat);
@@ -133,7 +138,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
 
   const geocodeLocationName = async (locationName) => {
     try {
-      
+
       const response = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`,
         {
@@ -143,7 +148,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
         }
       );
       const data = await response.json();
-      
+
       if (data && data.length > 0) {
         const lat = parseFloat(data[0].lat);
         const lng = parseFloat(data[0].lon);
@@ -157,20 +162,32 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
     }
   };
 
-  const loadResourcesFromBackend = async () => {
+  const loadResourcesForDisaster = async (disaster) => {
+    if (!disaster || !disaster.id) return;
+
+    const coords = parseLocationCoordinates(disaster.location);
+    if (!coords) {
+      toast.error("Disaster location is not available to find resources.");
+      return;
+    }
+
     setLoading(true);
     try {
-      
-      const response = await resources.getAll();
+      const response = await resources.getNearby(disaster.id, {
+        lat: coords.lat,
+        lon: coords.lng,
+        radius: searchRadius,
+      });
+
       if (response.success && response.data) {
         setMapResources(response.data);
       } else {
-       
+        toast.error(response.error?.message || "Failed to load resources.");
         setMapResources([]);
       }
     } catch (error) {
       console.error('Failed to load resources from backend:', error);
-      
+      toast.error('An unexpected error occurred while fetching resources.');
       setMapResources([]);
     } finally {
       setLoading(false);
@@ -202,8 +219,8 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
   };
 
   const handleFilterToggle = (filter) => {
-    setActiveFilters(prev => 
-      prev.includes(filter) 
+    setActiveFilters(prev =>
+      prev.includes(filter)
         ? prev.filter(f => f !== filter)
         : [...prev, filter]
     );
@@ -212,13 +229,13 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (query.length > 2) {
-      
+
       const filteredDisasters = disasters.filter(disaster =>
         disaster.title?.toLowerCase().includes(query.toLowerCase()) ||
         disaster.location_name?.toLowerCase().includes(query.toLowerCase()) ||
         disaster.description?.toLowerCase().includes(query.toLowerCase())
       );
-      
+
       if (filteredDisasters.length > 0) {
         const firstResult = filteredDisasters[0];
         const coords = parseLocationCoordinates(firstResult.location);
@@ -263,29 +280,29 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
     }
   };
 
-  
+
   const filteredDisasters = disasters.filter(disaster => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       disaster.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       disaster.location_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       disaster.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesFilter = activeFilters.includes('disasters');
-    
+
     return matchesSearch && matchesFilter;
   });
 
   const filteredResources = mapResources.filter(resource => {
-    const matchesSearch = !searchQuery || 
+    const matchesSearch = !searchQuery ||
       resource.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       resource.location_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesFilter = activeFilters.includes(resource.type);
-    
+
     return matchesSearch && matchesFilter;
   });
 
-  
+
   const resourceCounts = {
     disasters: disasters?.length || 0,
     shelters: mapResources.filter(r => r.type === 'shelter')?.length || 0,
@@ -296,7 +313,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-     
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -308,17 +325,17 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
             View disasters and resources on the interactive map
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-3 mt-4 lg:mt-0">
           <button
-            onClick={() => loadResourcesFromBackend()}
+            onClick={() => loadResourcesForDisaster(selectedDisaster)}
             disabled={loading}
             className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
-          
+
           <button
             onClick={getCurrentLocation}
             disabled={loading}
@@ -331,20 +348,20 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-       
+
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
           className="lg:col-span-1 space-y-6"
         >
-        
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center space-x-2 mb-4">
               <Search className="w-5 h-5 text-gray-500" />
               <h3 className="font-semibold text-gray-900">Search</h3>
             </div>
-            
+
             <input
               type="text"
               placeholder="Search locations..."
@@ -354,13 +371,13 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
             />
           </div>
 
-          
+
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center space-x-2 mb-4">
               <Filter className="w-5 h-5 text-gray-500" />
               <h3 className="font-semibold text-gray-900">Show on Map</h3>
             </div>
-            
+
             <div className="space-y-2">
               {[
                 { id: 'disasters', label: 'Disasters', color: '#ef4444', count: resourceCounts.disasters },
@@ -377,8 +394,8 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                   />
                   <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
+                    <div
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: filter.color }}
                     ></div>
                     <span className="text-sm font-medium text-gray-900">{filter.label}</span>
@@ -397,7 +414,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
               <Info className="w-5 h-5 text-gray-500" />
               <h3 className="font-semibold text-gray-900">Map Legend</h3>
             </div>
-            
+
             <div className="space-y-2 text-sm">
               <div className="flex items-center space-x-2">
                 <span className="text-lg">🚨</span>
@@ -423,7 +440,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
           </div>
         </motion.div>
 
-      
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -438,18 +455,18 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                 style={{ height: '100%', width: '100%' }}
                 className="rounded-xl"
               >
-                <MapController 
-                  center={mapCenter} 
+                <MapController
+                  center={mapCenter}
                   zoom={mapZoom}
                   onMapReady={setMapInstance}
                 />
-                
+
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                   url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
-               
+
                 <Circle
                   center={mapCenter}
                   radius={searchRadius}
@@ -462,7 +479,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                   }}
                 />
 
-               
+
                 {userLocation && (
                   <Marker position={userLocation} icon={userLocationIcon}>
                     <Popup>
@@ -473,14 +490,14 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                   </Marker>
                 )}
 
-               
+
                 {filteredDisasters.map((disaster) => {
                   const coords = parseLocationCoordinates(disaster.location);
-                  
-                  const markerPosition = coords 
+
+                  const markerPosition = coords
                     ? [coords.lat, coords.lng]
                     : [mapCenter[0] + (Math.random() - 0.5) * 0.02, mapCenter[1] + (Math.random() - 0.5) * 0.02];
-                  
+
                   return (
                     <Marker
                       key={`disaster-${disaster.id}`}
@@ -494,14 +511,14 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                         <div className="min-w-48">
                           <h3 className="font-semibold text-red-700 mb-2">{disaster.title}</h3>
                           <p className="text-sm text-gray-600 mb-2">{disaster.description}</p>
-                          
+
                           {disaster.location_name && (
                             <div className="flex items-center text-sm text-gray-500 mb-2">
                               <MapPin className="w-4 h-4 mr-1" />
                               {disaster.location_name}
                             </div>
                           )}
-                          
+
                           {disaster.tags && disaster.tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mb-2">
                               {disaster.tags.slice(0, 3).map((tag) => (
@@ -514,7 +531,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                               ))}
                             </div>
                           )}
-                          
+
                           <button
                             onClick={() => onDisasterSelect(disaster)}
                             className="w-full mt-2 px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
@@ -527,7 +544,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                   );
                 })}
 
-                
+
                 {filteredResources.map((resource) => (
                   <Marker
                     key={`resource-${resource.id}`}
@@ -540,24 +557,24 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                           {resource.name}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">{resource.description}</p>
-                        
+
                         <div className="flex items-center text-sm text-gray-500 mb-2">
                           <MapPin className="w-4 h-4 mr-1" />
                           {resource.location_name}
                         </div>
-                        
+
                         {resource.distance && (
                           <div className="text-sm text-gray-500 mb-2">
                             Distance: {(resource.distance / 1000).toFixed(1)} km
                           </div>
                         )}
-                        
+
                         {resource.contact_info && (
                           <div className="text-sm text-gray-700 mb-2">
                             <strong>Contact:</strong> {resource.contact_info}
                           </div>
                         )}
-                        
+
                         <div className="flex space-x-2 mt-2">
                           <span
                             className="px-2 py-1 text-xs rounded text-white capitalize"
@@ -572,7 +589,7 @@ const ResourceMap = ({ disasters, selectedDisaster, onDisasterSelect }) => {
                 ))}
               </MapContainer>
 
-             
+
               {loading && (
                 <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-[1000]">
                   <div className="text-center">

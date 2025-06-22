@@ -277,7 +277,8 @@ export const useApi = () => {
 	};
 
 	const resources = {
-		getNearby: useCallback(
+		getAll: useCallback(() => get("/resources"), [get]),
+		getForDisaster: useCallback(
 			(disasterId, params = {}) => {
 				const queryString = new URLSearchParams(params).toString();
 				const url = queryString
