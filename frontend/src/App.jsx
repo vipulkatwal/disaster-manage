@@ -31,7 +31,7 @@ function App() {
     id: process.env.REACT_APP_DEFAULT_USER_ID || 'netrunnerX',
     username: 'netrunnerX',
     role: 'admin',
-    name: 'Emergency Coordinator'
+    name: 'Crisis Response Manager'
   }), []);
 
   // Effect for one-time application initialization
