@@ -71,7 +71,7 @@ Follow these instructions to get the project up and running on your local machin
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/PiyushKADev/disaster-manage.git
+    git clone https://github.com/vipulkatwal/disaster-manage.git
     cd disaster-manage
     ```
 
